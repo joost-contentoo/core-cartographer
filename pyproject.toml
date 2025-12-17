@@ -56,6 +56,12 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
 
+[tool.ruff.lint.per-file-ignores]
+# Icons contain SVG strings that are inherently long
+"src/core_cartographer/icons.py" = ["E501"]
+# Prompt templates are more readable as single strings
+"src/core_cartographer/extractor.py" = ["E501"]
+
 [tool.mypy]
 python_version = "3.11"
 strict = true

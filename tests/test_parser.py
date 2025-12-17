@@ -1,14 +1,14 @@
 """Tests for document parsing."""
 
 from pathlib import Path
-import tempfile
 
 import pytest
 
+from core_cartographer.exceptions import UnsupportedFormatError
 from core_cartographer.parser import (
-    parse_document,
-    get_supported_files,
     SUPPORTED_EXTENSIONS,
+    get_supported_files,
+    parse_document,
 )
 
 
@@ -35,11 +35,11 @@ class TestParseDocument:
         assert "Some content" in result
 
     def test_unsupported_format_raises_error(self, tmp_path: Path) -> None:
-        """Test that unsupported formats raise ValueError."""
+        """Test that unsupported formats raise UnsupportedFormatError."""
         file_path = tmp_path / "test.xyz"
         file_path.write_text("content")
 
-        with pytest.raises(ValueError, match="Unsupported file format"):
+        with pytest.raises(UnsupportedFormatError, match="Unsupported file format"):
             parse_document(file_path)
 
     def test_missing_file_raises_error(self, tmp_path: Path) -> None:
@@ -48,6 +48,25 @@ class TestParseDocument:
 
         with pytest.raises(FileNotFoundError):
             parse_document(file_path)
+
+    def test_parse_utf8_content(self, tmp_path: Path) -> None:
+        """Test parsing a file with UTF-8 characters."""
+        file_path = tmp_path / "utf8.txt"
+        content = "Héllo Wörld! 日本語 🎉"
+        file_path.write_text(content, encoding="utf-8")
+
+        result = parse_document(file_path)
+
+        assert result == content
+
+    def test_parse_empty_file(self, tmp_path: Path) -> None:
+        """Test parsing an empty file."""
+        file_path = tmp_path / "empty.txt"
+        file_path.write_text("")
+
+        result = parse_document(file_path)
+
+        assert result == ""
 
 
 class TestGetSupportedFiles:
@@ -76,3 +95,24 @@ class TestGetSupportedFiles:
         result = get_supported_files(tmp_path / "nonexistent")
 
         assert result == []
+
+    def test_returns_sorted_files(self, tmp_path: Path) -> None:
+        """Test that files are returned in sorted order."""
+        (tmp_path / "z_file.txt").write_text("z")
+        (tmp_path / "a_file.txt").write_text("a")
+        (tmp_path / "m_file.txt").write_text("m")
+
+        result = get_supported_files(tmp_path)
+
+        assert result[0].name == "a_file.txt"
+        assert result[1].name == "m_file.txt"
+        assert result[2].name == "z_file.txt"
+
+
+class TestSupportedExtensions:
+    """Tests for SUPPORTED_EXTENSIONS constant."""
+
+    def test_expected_extensions(self) -> None:
+        """Test that expected extensions are supported."""
+        expected = {".txt", ".md", ".docx", ".pdf"}
+        assert SUPPORTED_EXTENSIONS == expected

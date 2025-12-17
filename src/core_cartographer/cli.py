@@ -1,29 +1,41 @@
 """Interactive CLI for Core Cartographer."""
 
+import logging
 import sys
 
 import questionary
 from rich.console import Console
+from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.syntax import Syntax
 from rich.table import Table
-from rich.markdown import Markdown
 
 from . import __version__
-from .config import get_settings, Settings
+from .config import Settings, get_settings
+from .cost_estimator import estimate_cost, format_cost, format_tokens
+from .exceptions import (
+    CartographerError,
+    ClientNotFoundError,
+    ConfigurationError,
+    ExtractionError,
+)
 from .extractor import (
-    scan_client_folder,
+    DocumentSet,
     extract_rules_and_guidelines,
     save_results,
-    DocumentSet,
+    scan_client_folder,
 )
-from .cost_estimator import estimate_cost, format_cost, format_tokens
+from .logging_config import get_logger, setup_logging
 
 console = Console()
+logger = get_logger(__name__)
 
 
 def main() -> None:
     """Main entry point for the CLI."""
+    # Setup logging (quiet for CLI, shows warnings and above)
+    setup_logging(level=logging.WARNING, console=True)
+
     console.print(
         Panel(
             f"[bold blue]Core Cartographer[/bold blue] v{__version__}\n"
@@ -34,7 +46,8 @@ def main() -> None:
 
     try:
         settings = get_settings()
-    except Exception as e:
+        logger.info("Settings loaded successfully")
+    except ConfigurationError as e:
         console.print(f"[red]Configuration error:[/red] {e}")
         console.print("[dim]Make sure you have a .env file with ANTHROPIC_API_KEY set.[/dim]")
         sys.exit(1)
@@ -42,6 +55,7 @@ def main() -> None:
     # Ensure input directory exists
     if not settings.input_dir.exists():
         console.print(f"[red]Input directory not found:[/red] {settings.input_dir}")
+        logger.error(f"Input directory not found: {settings.input_dir}")
         sys.exit(1)
 
     # Main menu loop
@@ -104,11 +118,17 @@ def _process_documents(settings: Settings) -> None:
 
     # Scan for documents
     console.print(f"\n[dim]Scanning {client_name}...[/dim]")
+    logger.info(f"Scanning client folder: {client_name}")
 
     try:
         document_sets = scan_client_folder(settings, client_name)
-    except Exception as e:
+    except ClientNotFoundError as e:
+        console.print(f"[red]Error:[/red] {e}")
+        logger.error(f"Client not found: {e}")
+        return
+    except CartographerError as e:
         console.print(f"[red]Error scanning folder:[/red] {e}")
+        logger.error(f"Error scanning folder: {e}")
         return
 
     if not document_sets:
@@ -182,7 +202,7 @@ def _display_cost_estimate(settings: Settings, document_sets: list[DocumentSet])
         settings.model,
     )
 
-    console.print(f"\n[bold]Estimated Cost:[/bold]")
+    console.print("\n[bold]Estimated Cost:[/bold]")
     console.print(f"  Input tokens:  {format_tokens(total_input_tokens)}")
     console.print(f"  Output tokens: ~{format_tokens(estimated_output_tokens)}")
     console.print(f"  [yellow]Estimated cost: {format_cost(cost)}[/yellow]\n")
@@ -191,11 +211,17 @@ def _display_cost_estimate(settings: Settings, document_sets: list[DocumentSet])
 def _process_document_set(settings: Settings, doc_set: DocumentSet) -> None:
     """Process a single document set and save results."""
     console.print(f"\n[bold]Processing {doc_set.subtype}...[/bold]")
+    logger.info(f"Processing document set: {doc_set.subtype}")
 
     try:
         result = extract_rules_and_guidelines(settings, doc_set)
-    except Exception as e:
+    except ExtractionError as e:
         console.print(f"[red]Extraction failed:[/red] {e}")
+        logger.error(f"Extraction failed: {e}")
+        return
+    except CartographerError as e:
+        console.print(f"[red]Error:[/red] {e}")
+        logger.error(f"Error during extraction: {e}")
         return
 
     # Display preview of client_rules.js
@@ -232,6 +258,7 @@ def _process_document_set(settings: Settings, doc_set: DocumentSet) -> None:
     rules_path, guidelines_path = save_results(settings, doc_set, result)
     console.print(f"[green]✓[/green] Saved: {rules_path}")
     console.print(f"[green]✓[/green] Saved: {guidelines_path}")
+    logger.info(f"Results saved to {rules_path.parent}")
 
 
 if __name__ == "__main__":

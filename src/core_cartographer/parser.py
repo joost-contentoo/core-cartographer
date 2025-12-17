@@ -2,9 +2,13 @@
 
 from pathlib import Path
 
-from pypdf import PdfReader
 from docx import Document
+from pypdf import PdfReader
 
+from .exceptions import DocumentParsingError, UnsupportedFormatError
+from .logging_config import get_logger
+
+logger = get_logger(__name__)
 
 SUPPORTED_EXTENSIONS = {".txt", ".md", ".docx", ".pdf"}
 
@@ -20,37 +24,62 @@ def parse_document(file_path: Path) -> str:
         Extracted text content from the document.
 
     Raises:
-        ValueError: If the file format is not supported.
+        UnsupportedFormatError: If the file format is not supported.
         FileNotFoundError: If the file does not exist.
+        DocumentParsingError: If the document cannot be parsed.
     """
     if not file_path.exists():
+        logger.error(f"File not found: {file_path}")
         raise FileNotFoundError(f"File not found: {file_path}")
 
     suffix = file_path.suffix.lower()
 
     if suffix not in SUPPORTED_EXTENSIONS:
-        raise ValueError(f"Unsupported file format: {suffix}")
+        logger.error(f"Unsupported file format: {suffix}")
+        raise UnsupportedFormatError(
+            f"Unsupported file format: {suffix}",
+            file_path=str(file_path),
+        )
 
-    if suffix in {".txt", ".md"}:
-        return _parse_text_file(file_path)
-    elif suffix == ".docx":
-        return _parse_docx(file_path)
-    elif suffix == ".pdf":
-        return _parse_pdf(file_path)
+    logger.debug(f"Parsing document: {file_path}")
 
-    raise ValueError(f"Unsupported file format: {suffix}")
+    try:
+        if suffix in {".txt", ".md"}:
+            return _parse_text_file(file_path)
+        elif suffix == ".docx":
+            return _parse_docx(file_path)
+        elif suffix == ".pdf":
+            return _parse_pdf(file_path)
+    except (UnsupportedFormatError, FileNotFoundError):
+        raise
+    except Exception as e:
+        logger.error(f"Failed to parse {file_path}: {e}")
+        raise DocumentParsingError(
+            f"Failed to parse document: {e}",
+            file_path=str(file_path),
+            original_error=e,
+        )
+
+    raise UnsupportedFormatError(
+        f"Unsupported file format: {suffix}",
+        file_path=str(file_path),
+    )
 
 
 def _parse_text_file(file_path: Path) -> str:
     """Parse a plain text or markdown file."""
-    return file_path.read_text(encoding="utf-8")
+    content = file_path.read_text(encoding="utf-8")
+    logger.debug(f"Parsed text file: {file_path} ({len(content)} chars)")
+    return content
 
 
 def _parse_docx(file_path: Path) -> str:
     """Parse a Word document and extract text."""
     doc = Document(file_path)
     paragraphs = [paragraph.text for paragraph in doc.paragraphs]
-    return "\n\n".join(paragraphs)
+    content = "\n\n".join(paragraphs)
+    logger.debug(f"Parsed DOCX: {file_path} ({len(paragraphs)} paragraphs)")
+    return content
 
 
 def _parse_pdf(file_path: Path) -> str:
@@ -63,7 +92,9 @@ def _parse_pdf(file_path: Path) -> str:
         if text:
             text_parts.append(text)
 
-    return "\n\n".join(text_parts)
+    content = "\n\n".join(text_parts)
+    logger.debug(f"Parsed PDF: {file_path} ({len(reader.pages)} pages)")
+    return content
 
 
 def get_supported_files(directory: Path) -> list[Path]:
@@ -77,10 +108,12 @@ def get_supported_files(directory: Path) -> list[Path]:
         List of paths to supported document files.
     """
     if not directory.exists():
+        logger.warning(f"Directory does not exist: {directory}")
         return []
 
     files = []
     for ext in SUPPORTED_EXTENSIONS:
         files.extend(directory.glob(f"*{ext}"))
 
+    logger.debug(f"Found {len(files)} supported files in {directory}")
     return sorted(files)

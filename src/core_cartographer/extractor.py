@@ -7,8 +7,16 @@ from pathlib import Path
 import anthropic
 
 from .config import Settings
-from .parser import get_supported_files, parse_document
 from .cost_estimator import count_tokens
+from .exceptions import (
+    ClientNotFoundError,
+    ExtractionError,
+    ResponseParsingError,
+)
+from .logging_config import get_logger
+from .parser import get_supported_files, parse_document
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -41,11 +49,15 @@ def scan_client_folder(settings: Settings, client_name: str) -> list[DocumentSet
 
     Returns:
         List of DocumentSet objects, one per subtype subfolder.
+
+    Raises:
+        ClientNotFoundError: If the client folder doesn't exist.
     """
     client_path = settings.input_dir / client_name
 
     if not client_path.exists():
-        raise FileNotFoundError(f"Client folder not found: {client_path}")
+        logger.error(f"Client folder not found: {client_path}")
+        raise ClientNotFoundError(client_name, str(settings.input_dir))
 
     document_sets = []
 
@@ -55,11 +67,13 @@ def scan_client_folder(settings: Settings, client_name: str) -> list[DocumentSet
     if not subtypes:
         # No subfolders, treat client folder as single subtype
         subtypes = [client_path]
+        logger.debug("No subtypes found, using client folder as single subtype")
 
     for subtype_path in subtypes:
         files = get_supported_files(subtype_path)
 
         if not files:
+            logger.debug(f"No documents found in {subtype_path}")
             continue
 
         documents = []
@@ -80,6 +94,10 @@ def scan_client_folder(settings: Settings, client_name: str) -> list[DocumentSet
                 total_tokens=total_tokens,
             )
         )
+        logger.info(
+            f"Found {len(documents)} documents in {subtype_name} "
+            f"({total_tokens:,} tokens)"
+        )
 
     return document_sets
 
@@ -97,7 +115,15 @@ def extract_rules_and_guidelines(
 
     Returns:
         ExtractionResult containing the client rules (JS) and guidelines (MD).
+
+    Raises:
+        ExtractionError: If the Claude API call fails.
+        ResponseParsingError: If the response cannot be parsed.
     """
+    logger.info(
+        f"Starting extraction for {document_set.client_name}/{document_set.subtype}"
+    )
+
     # Load example files and instructions
     client_rules_example = settings.client_rules_example_path.read_text(encoding="utf-8")
     guidelines_example = settings.guidelines_example_path.read_text(encoding="utf-8")
@@ -154,19 +180,49 @@ Respond with two clearly labeled sections:
 """
 
     # Make API call
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    try:
+        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
 
-    response = client.messages.create(
-        model=settings.model,
-        max_tokens=16000,
-        messages=[{"role": "user", "content": prompt}],
-    )
+        logger.debug(f"Calling Claude API with model: {settings.model}")
+        response = client.messages.create(
+            model=settings.model,
+            max_tokens=16000,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        logger.debug(
+            f"API response received: {response.usage.input_tokens} input, "
+            f"{response.usage.output_tokens} output tokens"
+        )
+    except anthropic.APIError as e:
+        logger.error(f"Claude API error: {e}")
+        raise ExtractionError(
+            f"Claude API error: {e}",
+            subtype=document_set.subtype,
+            original_error=e,
+        )
 
     # Parse response
     response_text = response.content[0].text
 
-    # Split response into client_rules and guidelines
-    client_rules, guidelines = _parse_response(response_text)
+    try:
+        client_rules, guidelines = _parse_response(response_text)
+    except Exception as e:
+        logger.error(f"Failed to parse response: {e}")
+        raise ResponseParsingError(
+            f"Failed to parse Claude response: {e}",
+            subtype=document_set.subtype,
+            original_error=e,
+        )
+
+    if not client_rules:
+        logger.warning("No client rules found in response")
+    if not guidelines:
+        logger.warning("No guidelines found in response")
+
+    logger.info(
+        f"Extraction complete: {len(client_rules)} chars rules, "
+        f"{len(guidelines)} chars guidelines"
+    )
 
     return ExtractionResult(
         client_rules=client_rules,
@@ -232,5 +288,7 @@ def save_results(
 
     client_rules_path.write_text(result.client_rules, encoding="utf-8")
     guidelines_path.write_text(result.guidelines, encoding="utf-8")
+
+    logger.info(f"Saved results to {output_path}")
 
     return client_rules_path, guidelines_path
