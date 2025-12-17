@@ -1,0 +1,20 @@
+EXAMPLE DOCUMENT - Gift Card Terms and Conditions
+
+This is a sample document to demonstrate the folder structure.
+Replace this with your actual client documents.
+
+---
+
+Gift Card Terms
+
+Thank you for purchasing an ExampleBrand Gift Card!
+
+Your gift card can be redeemed at any participating retailer.
+The card value does not expire.
+Lost or stolen cards cannot be replaced.
+
+For balance inquiries, visit www.example.com/balance
+
+---
+
+Note: This is placeholder content. Add your actual copy documents here.

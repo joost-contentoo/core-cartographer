@@ -1,190 +1,213 @@
 # Core Cartographer
 
-An intelligent document analysis tool that extracts **glossaries** and **guidelines** from copy documents using Claude Opus 4.5. Designed for translation and localization workflows.
+Extract **validation rules** and **localization guidelines** from copy documents using Claude Opus 4.5.
 
-## Overview
+## What It Does
 
-Core Cartographer processes collections of copy documents (e.g., gift cards, game cards, payment cards) and uses LLM analysis to extract:
+Core Cartographer analyzes collections of localized copy (e.g., product pages, marketing content) and reverse-engineers the implicit rules and style patterns into two outputs:
 
-- **Glossary**: Key terminology, definitions, and translation pairs
-- **Guidelines**: Style rules, tone of voice, formatting conventions, and content patterns
+1. **`client_rules.js`** - Machine-readable validation config for automated content checking
+2. **`guidelines.md`** - Human-readable localization guidance for writers and translators
 
-The tool organizes outputs by client and document subtype, making it ideal for managing multiple projects with varying document types.
+This enables you to:
+- Codify tribal knowledge from existing high-quality content
+- Ensure consistency across new content with automated validation
+- Onboard new translators with comprehensive style guides
+- Maintain separate rules/guidelines per client and content type
 
-## Features
+## Example Output
 
-- **Multi-format support**: Process `.txt`, `.md`, `.docx`, and `.pdf` files
-- **Language auto-detection**: Automatically identifies document languages and language pairs
-- **Holistic analysis**: Sends all documents in a subfolder to Claude at once for comprehensive pattern extraction
-- **Cost estimation**: Shows estimated API costs before processing
-- **Interactive review**: Preview extracted content before saving
-- **Client organization**: Outputs organized by client and document subtype
+### Client Rules (JavaScript)
+```javascript
+const client_rules = {
+  client: "acme",
+  locale: "de",
+
+  forbidden_words: ["Sie", "Ihnen", "Ihr"],  // Using informal "du"
+
+  terminology: [
+    { en: "gift card", de: "Gutschein", context: "product term" },
+    { en: "redeem", de: "einlösen", context: "action verb" }
+  ],
+
+  patterns: {
+    currency: {
+      invalid_patterns: ["\\d+€", "€\\d+"],
+      valid_format: "X €",
+      fix_message: "Use: number + space + euro sign"
+    }
+  }
+};
+```
+
+### Guidelines (Markdown)
+```markdown
+# ACME German Localization Guidelines
+
+## Brand Voice
+ACME speaks to German customers as a knowledgeable friend...
+
+## Writing Style
+Use informal "du" throughout. Never mix with "Sie"...
+```
 
 ## Project Structure
 
 ```
 core-cartographer/
-├── input/                      # Place client documents here
+├── input/                          # Client documents to analyze
 │   └── [client_name]/
-│       └── [subtype]/          # e.g., gift_cards, game_cards
+│       └── [subtype]/              # e.g., gift_cards, payment_cards
 │           ├── document1.pdf
-│           ├── document2.docx
-│           └── ...
-├── output/                     # Generated glossaries and guidelines
+│           └── document2.docx
+├── output/                         # Generated rules and guidelines
 │   └── [client_name]/
 │       └── [subtype]/
-│           ├── glossary.md
-│           └── guidelines.md
-├── templates/                  # Templates for output documents
-│   ├── glossary_template.md
-│   └── guidelines_template.md
-├── instructions/               # Instructions for Claude
+│           ├── client_rules.js     # Machine-readable validation config
+│           └── guidelines.md       # Human-readable guidance
+├── templates/                      # Example outputs for Claude to follow
+│   ├── client_rules_example.js
+│   └── guidelines_example.md
+├── instructions/                   # Extraction instructions for Claude
 │   └── extraction_instructions.md
-├── src/                        # Source code
-│   └── core_cartographer/
-│       ├── __init__.py
-│       ├── cli.py              # Interactive CLI
-│       ├── extractor.py        # Document extraction logic
-│       ├── parser.py           # Document parsing (PDF, DOCX, etc.)
-│       ├── cost_estimator.py   # Token counting and cost estimation
-│       └── config.py           # Configuration management
-├── .env.example                # Example environment variables
-├── pyproject.toml              # Python project configuration
-└── README.md
+└── src/core_cartographer/          # Python source code
 ```
 
 ## Installation
 
 ### Prerequisites
-
 - Python 3.11+
 - Anthropic API key
 
 ### Setup
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/core-cartographer.git
-   cd core-cartographer
-   ```
+```bash
+# Clone and enter directory
+git clone https://github.com/yourusername/core-cartographer.git
+cd core-cartographer
 
-2. Create and activate a virtual environment:
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   ```
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
-3. Install dependencies:
-   ```bash
-   pip install -e .
-   ```
+# Install
+pip install -e .
 
-4. Configure your API key:
-   ```bash
-   cp .env.example .env
-   # Edit .env and add your ANTHROPIC_API_KEY
-   ```
+# Configure API key
+cp .env.example .env
+# Edit .env and add your ANTHROPIC_API_KEY
+```
 
 ## Usage
-
-Run the interactive CLI:
 
 ```bash
 cartographer
 ```
 
-The menu will guide you through:
+The interactive CLI guides you through:
 
-1. **Select client** - Choose or create a client folder
-2. **Scan documents** - View detected subtypes and document counts
-3. **Estimate costs** - See token counts and estimated API costs
-4. **Process** - Extract glossaries and guidelines
-5. **Review** - Preview results before saving
+1. **Select client** - Choose from available client folders
+2. **Select subtypes** - Process all or specific document types
+3. **Review costs** - See estimated token usage and API costs
+4. **Extract** - Claude analyzes documents and generates outputs
+5. **Preview & confirm** - Review before saving
 
-### Example Workflow
+### Example Session
 
 ```
-$ cartographer
+╭──────────────────────────────────────────────────────────────╮
+│ Core Cartographer v0.1.0                                     │
+│ Extract validation rules and localization guidelines         │
+╰──────────────────────────────────────────────────────────────╯
 
-╭──────────────────────────────────────╮
-│     Core Cartographer v0.1.0         │
-╰──────────────────────────────────────╯
+? What would you like to do? Extract rules & guidelines
+? Select a client: dundle
 
-? Select a client: acme_corp
+         Documents Found
+┏━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━┓
+┃ Subtype      ┃ Documents ┃ Tokens ┃
+┡━━━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━┩
+│ gift_cards   │        12 │  8.2k  │
+│ game_cards   │         8 │  5.1k  │
+│ payment_cards│        15 │  9.7k  │
+└──────────────┴───────────┴────────┘
 
-Found 3 document subtypes:
-  • gift_cards (12 documents)
-  • game_cards (8 documents)
-  • payment_cards (15 documents)
+? Which subtypes to process? [All subtypes]
 
-? Select subtypes to process: [All]
-
-Estimated costs:
-  • Total tokens: ~45,000
-  • Estimated cost: $0.68
+Estimated Cost:
+  Input tokens:  38.0k
+  Output tokens: ~19.0k
+  Estimated cost: $2.0250
 
 ? Proceed with extraction? Yes
 
 Processing gift_cards...
-✓ Glossary extracted (127 terms)
-✓ Guidelines extracted
-
-[Preview of glossary.md shown here]
-
-? Save results? Yes
-✓ Saved to output/acme_corp/gift_cards/
+✓ Saved: output/dundle/gift_cards/client_rules.js
+✓ Saved: output/dundle/gift_cards/guidelines.md
 ```
+
+## Input Document Formats
+
+| Format | Extension | Notes |
+|--------|-----------|-------|
+| Plain text | `.txt` | Direct processing |
+| Markdown | `.md` | Preserves structure |
+| Word | `.docx` | Text extraction |
+| PDF | `.pdf` | Text extraction (no OCR) |
+
+## Customizing Extraction
+
+### Examples (templates/)
+
+The `templates/` folder contains example outputs that Claude uses as reference:
+- `client_rules_example.js` - Shows the expected JavaScript structure
+- `guidelines_example.md` - Shows the expected Markdown structure
+
+Edit these to match your preferred output format.
+
+### Instructions (instructions/)
+
+`extraction_instructions.md` tells Claude how to analyze documents and what to extract. Customize this to:
+- Add domain-specific extraction rules
+- Adjust the level of detail
+- Add new rule categories
+
+## How It Works
+
+1. **Document Collection**: All documents in a subtype folder are collected
+2. **Holistic Analysis**: Documents are sent to Claude Opus 4.5 together for comprehensive pattern recognition
+3. **Dual Extraction**: Claude generates both machine-readable rules and human-readable guidelines
+4. **Review Flow**: Preview outputs before committing to files
+
+### Why Holistic Analysis?
+
+Claude Opus 4.5's large context window (200k+ tokens) allows analyzing all documents at once. This produces:
+- More consistent terminology extraction
+- Better pattern recognition across documents
+- Identification of inconsistencies in source content
 
 ## Configuration
 
 ### Environment Variables (.env)
 
 ```bash
-ANTHROPIC_API_KEY=sk-ant-...    # Required: Your Anthropic API key
-INPUT_DIR=./input               # Optional: Custom input directory
-OUTPUT_DIR=./output             # Optional: Custom output directory
-MODEL=claude-opus-4-5-20251101  # Optional: Model to use
+ANTHROPIC_API_KEY=sk-ant-...    # Required
+INPUT_DIR=./input               # Optional (default: ./input)
+OUTPUT_DIR=./output             # Optional (default: ./output)
+MODEL=claude-opus-4-5-20251101  # Optional (default: opus 4.5)
 ```
 
-## Templates
+## Integration with Code Checker
 
-The `templates/` folder contains the structure templates for generated documents:
+The `client_rules.js` output is designed to feed into a separate Code Checker tool that validates new content against the extracted rules. The rules config includes:
 
-- **glossary_template.md**: Structure for the glossary output
-- **guidelines_template.md**: Structure for the guidelines output
-
-Edit these templates to customize the output format for your needs.
-
-## Instructions
-
-The `instructions/extraction_instructions.md` file contains detailed instructions for Claude on how to extract and format the glossary and guidelines. This ensures consistent extraction across runs.
-
-## Supported Document Formats
-
-| Format | Extension | Notes |
-|--------|-----------|-------|
-| Plain text | `.txt` | Direct text processing |
-| Markdown | `.md` | Preserves formatting |
-| Word | `.docx` | Text extraction, basic formatting |
-| PDF | `.pdf` | Text extraction (OCR not included) |
-
-## Best Practices
-
-1. **Organize by subtype**: Group similar documents in subfolders for more coherent glossaries
-2. **Use clean documents**: Ensure PDFs are text-based (not scanned images) for best results
-3. **Review before saving**: Always review the preview to catch any extraction issues
-4. **Keep templates updated**: Refine templates based on output quality
-
-## Limitations
-
-- PDF OCR is not included; scanned documents need pre-processing
-- Very large document sets may need to be split to stay within context limits
-- Language detection works best with substantial text content
+- `forbidden_words` - Terms that trigger validation errors
+- `terminology` - Required translations with context
+- `patterns` - Regex-based formatting rules
+- `lengths` - Character/word limits per content type
+- `keywords` - SEO placement requirements
+- `structure` - Required document elements
 
 ## License
 
 ISC
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit issues and pull requests.
