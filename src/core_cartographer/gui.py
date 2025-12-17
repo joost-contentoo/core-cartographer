@@ -165,9 +165,9 @@ def find_pairs_by_filename(df: pd.DataFrame, file_data: dict) -> pd.DataFrame:
                 best_match = cand_filename
 
         if best_match:
-            # Assign pair number to both files
-            df.loc[df["Filename"] == my_filename, "Pair #"] = pair_number
-            df.loc[df["Filename"] == best_match, "Pair #"] = pair_number
+            # Assign pair number to both files (as string)
+            df.loc[df["Filename"] == my_filename, "Pair #"] = str(pair_number)
+            df.loc[df["Filename"] == best_match, "Pair #"] = str(pair_number)
             processed.add(my_filename)
             processed.add(best_match)
             pair_number += 1
@@ -207,8 +207,12 @@ def sort_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             # No pair - sort at the end alphabetically
             return (999999, row["Filename"])
         else:
-            # Has pair - sort by pair number, then filename
-            return (int(pair), row["Filename"])
+            # Has pair - sort by pair number (as int), then filename
+            try:
+                pair_int = int(pair)
+            except (ValueError, TypeError):
+                pair_int = 999999
+            return (pair_int, row["Filename"])
 
     df["sort_key"] = df.apply(sort_key, axis=1)
     df = df.sort_values("sort_key").reset_index(drop=True)
@@ -278,6 +282,8 @@ def main() -> None:
         st.session_state.df = None
     if "subtypes" not in st.session_state:
         st.session_state.subtypes = ["general"]  # Default with just "general"
+    if "show_step2" not in st.session_state:
+        st.session_state.show_step2 = False
 
     # Sidebar: Client name
     with st.sidebar:
@@ -364,7 +370,16 @@ def main() -> None:
         st.info("👆 Upload documents to continue")
         st.stop()
 
-    # Automatically move to step 2 - run auto-detection if not done yet
+    # Show continue button
+    st.divider()
+    if not st.session_state.show_step2:
+        st.info("📝 Add any subtype labels above if needed, then continue to Step 2")
+        if st.button("➡️ Continue to Step 2", type="primary", use_container_width=True):
+            st.session_state.show_step2 = True
+            st.rerun()
+        st.stop()
+
+    # Run auto-detection if not done yet
     if st.session_state.df is None:
         with st.spinner("🔍 Auto-detecting languages and finding pairs..."):
             st.session_state.df = auto_detect_all(st.session_state.file_data, st.session_state.subtypes)
@@ -373,38 +388,50 @@ def main() -> None:
     st.header("📋 Step 2: Label & Review Documents")
 
     st.markdown("**Instructions:**")
-    st.markdown("- Language and paired files (Pair #) are auto-detected")
-    st.markdown("- **Pair #**: Files with the same number are paired, `-` means no pair")
-    st.markdown("- **Subtype**: Select from labels defined in Step 1 (add more labels above if needed)")
-    st.markdown("- Edit any fields if auto-detection is incorrect")
-    st.markdown("- Check **❌** to remove unwanted files")
+    st.markdown("- **✏️ Editable columns**: Subtype, Language, Pair #")
+    st.markdown("- **Subtype**: Select from colored labels defined in Step 1")
+    st.markdown("- **Language**: Language code (auto-detected, can be edited)")
+    st.markdown("- **Pair #**: Files with same number are paired, `-` means no pair")
+    st.markdown("- **❌ Delete**: Check to remove files immediately")
 
-    col1, col2, col3 = st.columns([1, 1, 1])
+    col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
 
     with col1:
+        if st.button("⬅️ Back to Step 1", use_container_width=True):
+            st.session_state.show_step2 = False
+            st.rerun()
+
+    with col2:
         if st.button("🔄 Re-run Auto-detection", use_container_width=True):
             with st.spinner("Detecting..."):
                 st.session_state.df = auto_detect_all(st.session_state.file_data, st.session_state.subtypes)
                 st.success("✓ Auto-detection complete!")
                 st.rerun()
 
-    with col2:
+    with col3:
         if st.button("🗑️ Clear All Labels", use_container_width=True):
             st.session_state.df["Subtype"] = st.session_state.subtypes[0]
             st.session_state.df["❌"] = False
             st.rerun()
 
-    with col3:
+    with col4:
         if st.button("❌ Remove All Files", use_container_width=True):
             st.session_state.file_data = {}
             st.session_state.df = None
+            st.session_state.show_step2 = False
             st.rerun()
 
-    # Add color indicator to dataframe for display
+    # Create colored subtype options for the dropdown
+    colored_subtype_options = {
+        f"{get_subtype_color(subtype, st.session_state.subtypes)} {subtype}": subtype
+        for subtype in st.session_state.subtypes
+    }
+
+    # Convert current subtype values to colored display format
     display_df = st.session_state.df.copy()
-    display_df.insert(2, "Type", display_df["Subtype"].apply(
+    display_df["Subtype"] = display_df["Subtype"].apply(
         lambda x: f"{get_subtype_color(x, st.session_state.subtypes)} {x}"
-    ))
+    )
 
     # Editable table - full height, no pagination
     edited_df = st.data_editor(
@@ -417,21 +444,25 @@ def main() -> None:
                 width="small",
             ),
             "Filename": st.column_config.TextColumn("Filename", disabled=True, width="medium"),
-            "Type": st.column_config.TextColumn("Type", disabled=True, width="medium"),
             "Subtype": st.column_config.SelectboxColumn(
                 "Subtype",
-                options=st.session_state.subtypes,
+                options=list(colored_subtype_options.keys()),
                 required=True,
                 width="medium",
+                help="Document category (editable)",
             ),
-            "Language": st.column_config.TextColumn("Language", width="small"),
-            "Pair #": st.column_config.TextColumn("Pair #", width="small", help="Files with same number are paired"),
+            "Language": st.column_config.TextColumn("Language", width="small", help="Language code (editable)"),
+            "Pair #": st.column_config.TextColumn("Pair #", width="small", help="Paired document number (editable)"),
         },
         hide_index=True,
         use_container_width=True,
         num_rows="fixed",
         height=600,  # Fixed height to show more rows
-        disabled=["Type"],  # Make Type column read-only
+    )
+
+    # Convert colored subtypes back to plain values
+    edited_df["Subtype"] = edited_df["Subtype"].apply(
+        lambda x: colored_subtype_options.get(x, x.split(" ", 1)[-1] if " " in x else x)
     )
 
     # Handle immediate deletions
@@ -442,16 +473,14 @@ def main() -> None:
             if filename in st.session_state.file_data:
                 del st.session_state.file_data[filename]
 
-        # Remove from dataframe, drop the Type column (it's just for display), and re-sort
+        # Remove from dataframe and re-sort
         remaining_df = edited_df[edited_df["❌"] == False].copy()
-        remaining_df = remaining_df.drop(columns=["Type"])
         st.session_state.df = sort_dataframe(remaining_df)
 
         st.success(f"✓ Deleted {len(files_to_delete)} file(s)")
         st.rerun()
 
-    # Update session state with edits (remove Type column as it's just for display)
-    edited_df = edited_df.drop(columns=["Type"])
+    # Update session state with edits
     st.session_state.df = edited_df
 
 
