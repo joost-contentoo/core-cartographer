@@ -59,39 +59,121 @@ def find_base_name(filename: str) -> str:
     # Remove extension
     name = Path(filename).stem
 
-    # Remove common language patterns
+    # Remove common language patterns (e.g., _EN, -DE, (FR), [NL])
     name = re.sub(r"[_\-\(\[]([A-Z]{2})[_\-\)\]]", "", name, flags=re.IGNORECASE)
 
-    # Clean up double separators
-    name = re.sub(r"[_\-]{2,}", "_", name)
-    name = name.strip("_-")
+    # Also remove trailing/standalone language codes (e.g., "document EN" or "documentEN")
+    name = re.sub(r"[\s_\-]*(EN|DE|FR|NL|ES|IT|PT|PL|RU|JA|ZH|KO)[\s_\-]*$", "", name, flags=re.IGNORECASE)
 
-    return name
+    # Clean up double separators and whitespace
+    name = re.sub(r"[\s_\-]{2,}", "_", name)
+    name = name.strip("_- ")
+
+    return name.lower()  # Normalize to lowercase for better matching
 
 
-def find_pairs_by_filename(df: pd.DataFrame) -> pd.DataFrame:
-    """Auto-detect paired files based on filename similarity."""
+def fuzzy_similarity(s1: str, s2: str) -> float:
+    """Calculate simple similarity ratio between two strings."""
+    if not s1 or not s2:
+        return 0.0
+
+    # Normalize strings
+    s1, s2 = s1.lower(), s2.lower()
+
+    # If one is substring of the other, high similarity
+    if s1 in s2 or s2 in s1:
+        return 0.8
+
+    # Count common characters
+    common = sum(1 for c in s1 if c in s2)
+    return common / max(len(s1), len(s2))
+
+
+def find_pairs_by_filename(df: pd.DataFrame, file_data: dict) -> pd.DataFrame:
+    """
+    Auto-detect paired files based on filename similarity and content.
+    Returns dataframe with pair numbers assigned.
+
+    Strategy:
+    1. Exact base name match (after removing language codes)
+    2. Fuzzy filename matching for similar names
+    3. Content length similarity for files with same detected language count
+    """
     df = df.copy()
 
     # Extract base names for each file
     df["base_name"] = df["Filename"].apply(find_base_name)
 
-    # For each file, find potential pairs with same base name but different language
-    for idx, row in df.iterrows():
-        if pd.isna(row["Paired with"]) or row["Paired with"] == "":
-            # Find files with same base name but different language
-            same_base = df[
-                (df["base_name"] == row["base_name"])
-                & (df["Filename"] != row["Filename"])
-                & (df["Language"] != row["Language"])
-                & (df["Language"] != "UNKNOWN")
-                & (row["Language"] != "UNKNOWN")
-            ]
+    # Assign pair numbers
+    pair_number = 1
+    processed = set()
 
-            if len(same_base) > 0:
-                # Pair with first match
-                paired_file = same_base.iloc[0]["Filename"]
-                df.at[idx, "Paired with"] = paired_file
+    for idx, row in df.iterrows():
+        if row["Filename"] in processed:
+            continue
+
+        my_lang = row["Language"]
+        my_base = row["base_name"]
+        my_filename = row["Filename"]
+
+        # Skip if language is unknown
+        if my_lang == "UNKNOWN":
+            df.loc[idx, "Pair #"] = "-"
+            processed.add(my_filename)
+            continue
+
+        # Candidates: files not yet processed, different language
+        candidates = df[
+            (~df["Filename"].isin(processed))
+            & (df["Filename"] != my_filename)
+            & (df["Language"] != my_lang)
+            & (df["Language"] != "UNKNOWN")
+        ]
+
+        if len(candidates) == 0:
+            df.loc[idx, "Pair #"] = "-"
+            processed.add(my_filename)
+            continue
+
+        best_match = None
+        best_score = 0.0
+
+        for _, candidate in candidates.iterrows():
+            cand_base = candidate["base_name"]
+            cand_filename = candidate["Filename"]
+
+            # Score 1: Exact base name match (highest priority)
+            if my_base and cand_base and my_base == cand_base:
+                best_match = cand_filename
+                break  # Perfect match, stop searching
+
+            # Score 2: Fuzzy filename similarity
+            fuzzy_score = fuzzy_similarity(my_base, cand_base)
+
+            # Score 3: Content length similarity (documents in different languages often have similar length)
+            my_content = file_data.get(my_filename, "")
+            cand_content = file_data.get(cand_filename, "")
+            if my_content and cand_content:
+                len_ratio = min(len(my_content), len(cand_content)) / max(len(my_content), len(cand_content))
+                # Weight content similarity as bonus
+                combined_score = fuzzy_score * 0.7 + len_ratio * 0.3
+            else:
+                combined_score = fuzzy_score
+
+            if combined_score > best_score and combined_score > 0.5:  # Threshold
+                best_score = combined_score
+                best_match = cand_filename
+
+        if best_match:
+            # Assign pair number to both files
+            df.loc[df["Filename"] == my_filename, "Pair #"] = pair_number
+            df.loc[df["Filename"] == best_match, "Pair #"] = pair_number
+            processed.add(my_filename)
+            processed.add(best_match)
+            pair_number += 1
+        else:
+            df.loc[idx, "Pair #"] = "-"
+            processed.add(my_filename)
 
     # Remove helper column
     df = df.drop(columns=["base_name"])
@@ -99,31 +181,14 @@ def find_pairs_by_filename(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def detect_translation_direction(file1_content: str, file2_content: str, lang1: str, lang2: str) -> str:
-    """
-    Detect translation direction based on content length and common patterns.
-    Returns format like "EN → DE" or "DE → EN".
-    """
-    len1 = len(file1_content)
-    len2 = len(file2_content)
-
-    # Heuristic: English is often source language in localization
-    if lang1 == "EN" and lang2 != "EN":
-        return f"{lang1} → {lang2}"
-    elif lang2 == "EN" and lang1 != "EN":
-        return f"{lang2} → {lang1}"
-
-    # Heuristic: Longer text is often the source (target may be condensed)
-    if len1 > len2 * 1.1:  # 10% threshold
-        return f"{lang1} → {lang2}"
-    elif len2 > len1 * 1.1:
-        return f"{lang2} → {lang1}"
-
-    # Default: alphabetical
-    if lang1 < lang2:
-        return f"{lang1} → {lang2}"
-    else:
-        return f"{lang2} → {lang1}"
+def get_subtype_color(subtype: str, all_subtypes: list[str]) -> str:
+    """Assign a colored circle emoji to each subtype for visual distinction."""
+    colors = ["🔵", "🟢", "🟡", "🟠", "🟣", "🔴", "🟤", "⚫", "⚪", "🟥", "🟧", "🟨", "🟩", "🟦", "🟪"]
+    try:
+        idx = all_subtypes.index(subtype) % len(colors)
+        return colors[idx]
+    except ValueError:
+        return "⚪"
 
 
 def sort_dataframe(df: pd.DataFrame) -> pd.DataFrame:
@@ -132,47 +197,36 @@ def sort_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """
     df = df.copy()
 
-    # Create a sort key that groups pairs together
-    df["sort_key"] = ""
-    processed = set()
+    # Create sort keys
+    # Files with pair numbers sort first by pair number, then by filename
+    # Files with "-" sort by filename only
 
-    for idx, row in df.iterrows():
-        if row["Filename"] in processed:
-            continue
-
-        if row["Paired with"] and row["Paired with"] != "":
-            # This file has a pair - create a group key
-            pair_files = sorted([row["Filename"], row["Paired with"]])
-            group_key = pair_files[0]  # Use first alphabetically as group key
-
-            # Assign same sort key to both files
-            df.loc[df["Filename"] == row["Filename"], "sort_key"] = group_key
-            df.loc[df["Filename"] == row["Paired with"], "sort_key"] = group_key
-
-            processed.add(row["Filename"])
-            processed.add(row["Paired with"])
+    def sort_key(row):
+        pair = row["Pair #"]
+        if pair == "-":
+            # No pair - sort at the end alphabetically
+            return (999999, row["Filename"])
         else:
-            # No pair - use filename as sort key
-            df.loc[idx, "sort_key"] = row["Filename"]
-            processed.add(row["Filename"])
+            # Has pair - sort by pair number, then filename
+            return (int(pair), row["Filename"])
 
-    # Sort by sort_key, then by filename
-    df = df.sort_values(["sort_key", "Filename"]).reset_index(drop=True)
+    df["sort_key"] = df.apply(sort_key, axis=1)
+    df = df.sort_values("sort_key").reset_index(drop=True)
     df = df.drop(columns=["sort_key"])
 
     return df
 
 
-def auto_detect_all(file_data: dict) -> pd.DataFrame:
+def auto_detect_all(file_data: dict, subtypes: list[str]) -> pd.DataFrame:
     """Run auto-detection on all files and return dataframe."""
-    # Initialize dataframe
+    # Initialize dataframe with default subtype from the list
+    default_subtype = subtypes[0] if subtypes else "general"
     data = {
-        "Delete": [False] * len(file_data),
+        "❌": [False] * len(file_data),
         "Filename": list(file_data.keys()),
-        "Subtype": [""] * len(file_data),
+        "Subtype": [default_subtype] * len(file_data),
         "Language": [""] * len(file_data),
-        "Paired with": [""] * len(file_data),
-        "Direction": [""] * len(file_data),
+        "Pair #": ["-"] * len(file_data),
     }
     df = pd.DataFrame(data)
 
@@ -189,20 +243,8 @@ def auto_detect_all(file_data: dict) -> pd.DataFrame:
             detected = detect_language(content)
             df.at[idx, "Language"] = detected
 
-    # Find pairs
-    df = find_pairs_by_filename(df)
-
-    # Detect directions for pairs
-    for idx, row in df.iterrows():
-        if row["Paired with"] and row["Paired with"] != "":
-            paired_row = df[df["Filename"] == row["Paired with"]]
-            if len(paired_row) > 0:
-                content1 = file_data[row["Filename"]]
-                content2 = file_data[row["Paired with"]]
-                direction = detect_translation_direction(
-                    content1, content2, row["Language"], paired_row.iloc[0]["Language"]
-                )
-                df.at[idx, "Direction"] = direction
+    # Find pairs and assign numbers (passing file_data for content-based matching)
+    df = find_pairs_by_filename(df, file_data)
 
     # Sort the dataframe
     df = sort_dataframe(df)
@@ -234,8 +276,8 @@ def main() -> None:
         st.session_state.file_data = {}  # {filename: content}
     if "df" not in st.session_state:
         st.session_state.df = None
-    if "all_subtypes" not in st.session_state:
-        st.session_state.all_subtypes = ["gift_cards", "game_cards", "payment_cards"]
+    if "subtypes" not in st.session_state:
+        st.session_state.subtypes = ["general"]  # Default with just "general"
 
     # Sidebar: Client name
     with st.sidebar:
@@ -255,15 +297,49 @@ def main() -> None:
         st.markdown(f"**Model:** {settings.model}")
         st.markdown(f"**Supported:** {', '.join(SUPPORTED_EXTENSIONS)}")
 
-    # Step 1: File Upload
+    # Step 1: File Upload & Subtype Labels
     st.header("📤 Step 1: Upload Documents")
 
-    uploaded_files = st.file_uploader(
-        "Upload all documents to analyze",
-        type=list(ext.replace(".", "") for ext in SUPPORTED_EXTENSIONS),
-        accept_multiple_files=True,
-        help="Select all files at once",
-    )
+    col_upload, col_labels = st.columns([2, 1])
+
+    with col_upload:
+        uploaded_files = st.file_uploader(
+            "Upload all documents to analyze",
+            type=list(ext.replace(".", "") for ext in SUPPORTED_EXTENSIONS),
+            accept_multiple_files=True,
+            help="Select all files at once",
+        )
+
+    with col_labels:
+        st.markdown("**Subtype Labels** (optional)")
+        st.caption("Define labels to categorize documents. Default is 'general'.")
+
+        # Show current labels as tags
+        if st.session_state.subtypes:
+            st.markdown(" ".join([f"`{s}`" for s in st.session_state.subtypes]))
+
+        # Add new label
+        new_label = st.text_input(
+            "Add label",
+            placeholder="e.g., gift_cards",
+            key="new_subtype_input",
+            label_visibility="collapsed",
+        )
+        if st.button("➕ Add", key="add_subtype_btn", use_container_width=True):
+            if new_label and new_label.strip():
+                label = new_label.strip().lower().replace(" ", "_")
+                if label not in st.session_state.subtypes:
+                    st.session_state.subtypes.append(label)
+                    st.rerun()
+
+        # Reset labels
+        if len(st.session_state.subtypes) > 1:
+            if st.button("🔄 Reset to 'general'", key="reset_subtypes_btn", use_container_width=True):
+                st.session_state.subtypes = ["general"]
+                # Also reset subtypes in the dataframe if it exists
+                if st.session_state.df is not None:
+                    st.session_state.df["Subtype"] = "general"
+                st.rerun()
 
     if uploaded_files:
         # Parse and store new files
@@ -282,13 +358,7 @@ def main() -> None:
                 finally:
                     tmp_path.unlink()
 
-        st.success(f"✓ {len(st.session_state.file_data)} document(s) uploaded")
-
-        # Show list of uploaded files
-        with st.expander("📄 View uploaded files"):
-            for filename in sorted(st.session_state.file_data.keys()):
-                tokens = count_tokens(st.session_state.file_data[filename])
-                st.markdown(f"- {filename} — {format_tokens(tokens)}")
+        st.success(f"✓ {len(st.session_state.file_data)} document(s) ready")
 
     if not st.session_state.file_data:
         st.info("👆 Upload documents to continue")
@@ -297,30 +367,31 @@ def main() -> None:
     # Automatically move to step 2 - run auto-detection if not done yet
     if st.session_state.df is None:
         with st.spinner("🔍 Auto-detecting languages and finding pairs..."):
-            st.session_state.df = auto_detect_all(st.session_state.file_data)
+            st.session_state.df = auto_detect_all(st.session_state.file_data, st.session_state.subtypes)
 
     # Step 2: Edit table
     st.header("📋 Step 2: Label & Review Documents")
 
     st.markdown("**Instructions:**")
-    st.markdown("- Language and paired files are auto-detected")
-    st.markdown("- Add **Subtype** labels to group files for extraction")
+    st.markdown("- Language and paired files (Pair #) are auto-detected")
+    st.markdown("- **Pair #**: Files with the same number are paired, `-` means no pair")
+    st.markdown("- **Subtype**: Select from labels defined in Step 1 (add more labels above if needed)")
     st.markdown("- Edit any fields if auto-detection is incorrect")
-    st.markdown("- Check **❌ Delete** to remove unwanted files")
+    st.markdown("- Check **❌** to remove unwanted files")
 
     col1, col2, col3 = st.columns([1, 1, 1])
 
     with col1:
         if st.button("🔄 Re-run Auto-detection", use_container_width=True):
             with st.spinner("Detecting..."):
-                st.session_state.df = auto_detect_all(st.session_state.file_data)
+                st.session_state.df = auto_detect_all(st.session_state.file_data, st.session_state.subtypes)
                 st.success("✓ Auto-detection complete!")
                 st.rerun()
 
     with col2:
         if st.button("🗑️ Clear All Labels", use_container_width=True):
-            st.session_state.df["Subtype"] = ""
-            st.session_state.df["Delete"] = False
+            st.session_state.df["Subtype"] = st.session_state.subtypes[0]
+            st.session_state.df["❌"] = False
             st.rerun()
 
     with col3:
@@ -329,64 +400,60 @@ def main() -> None:
             st.session_state.df = None
             st.rerun()
 
+    # Add color indicator to dataframe for display
+    display_df = st.session_state.df.copy()
+    display_df.insert(2, "Type", display_df["Subtype"].apply(
+        lambda x: f"{get_subtype_color(x, st.session_state.subtypes)} {x}"
+    ))
+
     # Editable table - full height, no pagination
     edited_df = st.data_editor(
-        st.session_state.df,
+        display_df,
         column_config={
-            "Delete": st.column_config.CheckboxColumn(
+            "❌": st.column_config.CheckboxColumn(
                 "❌",
-                help="Check to delete this file",
+                help="Click to delete this file",
                 default=False,
                 width="small",
             ),
             "Filename": st.column_config.TextColumn("Filename", disabled=True, width="medium"),
+            "Type": st.column_config.TextColumn("Type", disabled=True, width="medium"),
             "Subtype": st.column_config.SelectboxColumn(
                 "Subtype",
-                options=st.session_state.all_subtypes,
-                required=False,
+                options=st.session_state.subtypes,
+                required=True,
                 width="medium",
             ),
             "Language": st.column_config.TextColumn("Language", width="small"),
-            "Paired with": st.column_config.SelectboxColumn(
-                "Paired with", options=[""] + list(st.session_state.df["Filename"]), width="medium"
-            ),
-            "Direction": st.column_config.TextColumn("Direction", width="small"),
+            "Pair #": st.column_config.TextColumn("Pair #", width="small", help="Files with same number are paired"),
         },
         hide_index=True,
         use_container_width=True,
         num_rows="fixed",
         height=600,  # Fixed height to show more rows
+        disabled=["Type"],  # Make Type column read-only
     )
 
-    # Update session state with edits
+    # Handle immediate deletions
+    files_to_delete = edited_df[edited_df["❌"] == True]
+    if len(files_to_delete) > 0:
+        # Remove from file_data
+        for filename in files_to_delete["Filename"]:
+            if filename in st.session_state.file_data:
+                del st.session_state.file_data[filename]
+
+        # Remove from dataframe, drop the Type column (it's just for display), and re-sort
+        remaining_df = edited_df[edited_df["❌"] == False].copy()
+        remaining_df = remaining_df.drop(columns=["Type"])
+        st.session_state.df = sort_dataframe(remaining_df)
+
+        st.success(f"✓ Deleted {len(files_to_delete)} file(s)")
+        st.rerun()
+
+    # Update session state with edits (remove Type column as it's just for display)
+    edited_df = edited_df.drop(columns=["Type"])
     st.session_state.df = edited_df
 
-    # Handle deletions
-    files_to_delete = edited_df[edited_df["Delete"] == True]
-    if len(files_to_delete) > 0:
-        if st.button(f"🗑️ Confirm Delete {len(files_to_delete)} File(s)", type="secondary", use_container_width=True):
-            # Remove from file_data
-            for filename in files_to_delete["Filename"]:
-                if filename in st.session_state.file_data:
-                    del st.session_state.file_data[filename]
-
-            # Remove from dataframe and re-sort
-            remaining_df = edited_df[edited_df["Delete"] == False].copy()
-            st.session_state.df = sort_dataframe(remaining_df)
-
-            st.success(f"✓ Deleted {len(files_to_delete)} file(s)")
-            st.rerun()
-
-    # Update subtype suggestions
-    unique_subtypes = [s for s in edited_df["Subtype"].unique() if s and s != ""]
-    for subtype in unique_subtypes:
-        if subtype not in st.session_state.all_subtypes:
-            st.session_state.all_subtypes.append(subtype)
-
-    # Validation
-    missing_subtypes = edited_df[edited_df["Subtype"] == ""]
-    if len(missing_subtypes) > 0:
-        st.info(f"ℹ️ {len(missing_subtypes)} file(s) need subtype labels before extraction")
 
     # Step 3: Extract
     st.header("🚀 Step 3: Extract Rules & Guidelines")
@@ -395,18 +462,13 @@ def main() -> None:
     subtypes = [s for s in edited_df["Subtype"].unique() if s and s != ""]
 
     if not subtypes:
-        st.info("👆 Add subtype labels to files before extracting")
-        st.stop()
+        st.info("👆 All files are using the default 'general' subtype")
 
     # Show summary
     col1, col2, col3 = st.columns(3)
 
-    files_with_subtype = edited_df[edited_df["Subtype"] != ""]
-    total_tokens = sum(
-        count_tokens(st.session_state.file_data[fname])
-        for fname in files_with_subtype["Filename"]
-    )
-    example_tokens = 5000 * len(subtypes)
+    total_tokens = sum(count_tokens(content) for content in st.session_state.file_data.values())
+    example_tokens = 5000 * len(subtypes) if subtypes else 5000
     total_input = total_tokens + example_tokens
     estimated_output = int(total_input * 0.5)
     cost = estimate_cost(total_input, estimated_output, settings.model)
@@ -423,15 +485,17 @@ def main() -> None:
         for subtype in sorted(subtypes):
             subtype_files = edited_df[edited_df["Subtype"] == subtype]
             languages = [lang for lang in subtype_files["Language"].unique() if lang and lang != ""]
+            pairs = [p for p in subtype_files["Pair #"].unique() if p != "-"]
 
             st.markdown(f"**{subtype}**")
             st.markdown(f"- Files: {len(subtype_files)}")
             st.markdown(f"- Languages: {', '.join(languages) if languages else 'Not specified'}")
+            st.markdown(f"- Paired sets: {len(pairs)}")
 
             # Show which files
             for _, row in subtype_files.iterrows():
-                pair_info = f" (paired with {row['Paired with']})" if row["Paired with"] else ""
-                st.markdown(f"  - {row['Filename']}{pair_info}")
+                pair_info = f" [Pair #{row['Pair #']}]" if row["Pair #"] != "-" else ""
+                st.markdown(f"  - {row['Filename']} ({row['Language']}){pair_info}")
 
     if not client_name:
         st.warning("⚠️ Please enter a client name in the sidebar")

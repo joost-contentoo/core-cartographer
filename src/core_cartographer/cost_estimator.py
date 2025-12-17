@@ -7,8 +7,12 @@ import tiktoken
 # Using Claude Opus 4.5 pricing
 PRICING = {
     "claude-opus-4-5-20251101": {
-        "input": 15.00,  # $15 per 1M input tokens
-        "output": 75.00,  # $75 per 1M output tokens
+        "input": 5.00,  # $5 per 1M input tokens
+        "output": 25.00,  # $25 per 1M output tokens
+    },
+    "claude-sonnet-4-5": {
+        "input": 3.00,  # $3 per 1M input tokens
+        "output": 15.00,  # $15 per 1M output tokens
     },
     "claude-sonnet-4-20250514": {
         "input": 3.00,  # $3 per 1M input tokens
