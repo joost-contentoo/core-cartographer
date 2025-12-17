@@ -35,6 +35,17 @@ class Settings(BaseSettings):
     instructions_dir: Path = Field(
         default=Path("./instructions"), description="Instructions directory"
     )
+    debug_dir: Path = Field(default=Path("./debug"), description="Debug output directory")
+
+    # Processing Options
+    debug_mode: bool = Field(
+        default=False,
+        description="Debug mode: save prompts to files instead of calling API"
+    )
+    batch_processing: bool = Field(
+        default=False,
+        description="Batch processing: process all subtypes in one API call"
+    )
 
     @field_validator("anthropic_api_key")
     @classmethod

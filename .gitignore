@@ -63,3 +63,5 @@ input/*
 !input/example_client/
 output/*
 !output/.gitkeep
+debug/*
+!debug/.gitkeep

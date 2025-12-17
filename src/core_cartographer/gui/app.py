@@ -14,9 +14,14 @@ import streamlit as st
 try:
     from ..config import get_settings
     from ..cost_estimator import count_tokens, estimate_cost, format_cost, format_tokens
-    from ..extractor import DocumentSet, extract_rules_and_guidelines
+    from ..extractor import (
+        extract_rules_and_guidelines,
+        extract_rules_and_guidelines_batch,
+        estimate_prompt_tokens,
+    )
     from ..icons import ICON_SETTINGS
     from ..logging_config import get_logger, setup_logging
+    from ..models import DocumentSet
     from ..parser import SUPPORTED_EXTENSIONS, parse_document
     from .components import (
         load_css,
@@ -28,6 +33,7 @@ try:
     from .data_manager import (
         apply_colored_subtypes,
         auto_detect_all,
+        dataframe_to_document_sets,
         extract_subtypes_from_display,
         get_colored_subtype_options,
         sort_dataframe,
@@ -42,7 +48,11 @@ except ImportError:
         format_cost,
         format_tokens,
     )
-    from core_cartographer.extractor import DocumentSet, extract_rules_and_guidelines
+    from core_cartographer.extractor import (
+        extract_rules_and_guidelines,
+        extract_rules_and_guidelines_batch,
+        estimate_prompt_tokens,
+    )
     from core_cartographer.gui.components import (
         load_css,
         render_file_status,
@@ -53,12 +63,14 @@ except ImportError:
     from core_cartographer.gui.data_manager import (
         apply_colored_subtypes,
         auto_detect_all,
+        dataframe_to_document_sets,
         extract_subtypes_from_display,
         get_colored_subtype_options,
         sort_dataframe,
     )
     from core_cartographer.icons import ICON_SETTINGS
     from core_cartographer.logging_config import get_logger, setup_logging
+    from core_cartographer.models import DocumentSet
     from core_cartographer.parser import SUPPORTED_EXTENSIONS, parse_document
 
 logger = get_logger(__name__)
@@ -232,27 +244,61 @@ def render_step_extract(settings) -> None:
     """Render Step 3: Extract & Results."""
     st.markdown("### Extraction & Results")
 
-    subtypes = [s for s in st.session_state.df["Subtype"].unique() if s]
+    # Convert DataFrame to DocumentSets (preserves language/pair info)
+    all_doc_sets = dataframe_to_document_sets(
+        df=st.session_state.df,
+        file_data=st.session_state.file_data,
+        client_name=st.session_state.client_name,
+    )
+
+    subtypes = [ds.subtype for ds in all_doc_sets]
 
     # Summary Metrics
     c1, c2, c3 = st.columns(3)
     with c1:
         render_metric_card("Groups", str(len(subtypes)))
 
-    total_tokens = sum(count_tokens(c) for c in st.session_state.file_data.values())
+    total_tokens = sum(ds.total_tokens for ds in all_doc_sets)
     with c2:
         render_metric_card("Total Tokens", format_tokens(total_tokens))
 
+    # Estimate cost using the new function
+    est_input_tokens = estimate_prompt_tokens(
+        client_name=st.session_state.client_name,
+        document_sets=all_doc_sets,
+        settings=settings,
+    )
+
+    # Adjust for batch vs individual
+    if not settings.batch_processing and len(subtypes) > 1:
+        # Individual mode: prompt overhead per subtype
+        est_input_tokens = est_input_tokens + (4000 * (len(subtypes) - 1))
+
     est_cost = estimate_cost(
-        total_tokens + (5000 * len(subtypes)), total_tokens * 0.5, settings.model
+        est_input_tokens, total_tokens * 0.5, settings.model
     )
     with c3:
         render_metric_card("Est. Cost", format_cost(est_cost))
 
     st.divider()
 
+    # Show language/pair summary
+    total_pairs = sum(len(ds.paired_documents) for ds in all_doc_sets)
+    total_unpaired = sum(len(ds.unpaired_documents) for ds in all_doc_sets)
+
+    if total_pairs > 0:
+        st.success(f"✅ {total_pairs} document pair(s) detected - terminology extraction enabled")
+    elif total_unpaired > 0:
+        st.warning("⚠️ No document pairs detected - terminology extraction will be limited")
+
     if "results" not in st.session_state:
         st.session_state.results = {}
+
+    # Show mode indicator
+    if settings.debug_mode:
+        st.info("🐛 Debug Mode: Prompts will be saved to /debug folder (no API calls)")
+    if settings.batch_processing and len(subtypes) > 1:
+        st.info("📦 Batch Processing: All subtypes will be processed in one API call")
 
     # Action Button
     if not st.session_state.results:
@@ -260,39 +306,42 @@ def render_step_extract(settings) -> None:
             progress_bar = st.progress(0, text="Initializing...")
             results = {}
 
-            for i, subtype in enumerate(sorted(subtypes)):
-                progress_bar.progress(
-                    i / len(subtypes), text=f"Analyzing {subtype} group..."
-                )
-                logger.info(f"Processing subtype: {subtype}")
-
-                subtype_files = st.session_state.df[
-                    st.session_state.df["Subtype"] == subtype
-                ]
-                documents = []
-                for _, row in subtype_files.iterrows():
-                    filename = row["Filename"]
-                    content = st.session_state.file_data[filename]
-                    documents.append((Path(filename), content))
-
-                doc_set = DocumentSet(
-                    client_name=st.session_state.client_name,
-                    subtype=subtype,
-                    documents=documents,
-                    total_tokens=sum(count_tokens(c) for _, c in documents),
-                )
+            # Process based on mode
+            if settings.batch_processing and len(all_doc_sets) > 1:
+                # Batch processing: one API call for all subtypes
+                progress_bar.progress(0.5, text="Processing all groups in batch...")
+                logger.info(f"Batch processing {len(all_doc_sets)} subtypes")
 
                 try:
-                    result = extract_rules_and_guidelines(settings, doc_set)
-                    results[subtype] = result
-                    logger.info(f"Extraction complete for {subtype}")
+                    results = extract_rules_and_guidelines_batch(settings, all_doc_sets)
+                    logger.info("Batch extraction complete")
                 except Exception as e:
-                    st.error(f"Error processing {subtype}: {e}")
-                    logger.error(f"Extraction failed for {subtype}: {e}")
+                    st.error(f"Error during batch processing: {e}")
+                    logger.error(f"Batch extraction failed: {e}")
+            else:
+                # Individual processing: one API call per subtype
+                for i, doc_set in enumerate(all_doc_sets):
+                    progress_bar.progress(
+                        i / len(all_doc_sets), text=f"Analyzing {doc_set.subtype} group..."
+                    )
+                    logger.info(f"Processing subtype: {doc_set.subtype}")
+
+                    try:
+                        result = extract_rules_and_guidelines(settings, doc_set)
+                        results[doc_set.subtype] = result
+                        logger.info(f"Extraction complete for {doc_set.subtype}")
+                    except Exception as e:
+                        st.error(f"Error processing {doc_set.subtype}: {e}")
+                        logger.error(f"Extraction failed for {doc_set.subtype}: {e}")
 
             progress_bar.empty()
             st.session_state.results = results
-            st.balloons()
+
+            if settings.debug_mode:
+                st.success("✅ Debug mode: Prompts saved successfully!")
+            else:
+                st.balloons()
+
             st.rerun()
 
     # Display Results
@@ -364,6 +413,25 @@ def main() -> None:
         st.markdown("### Configuration")
         st.caption(f"Model: {settings.model}")
         st.caption(f"Files: {', '.join(SUPPORTED_EXTENSIONS)}")
+        st.divider()
+
+        # Processing options
+        st.markdown("### Processing Options")
+
+        debug_mode = st.checkbox(
+            "Debug Mode",
+            value=settings.debug_mode,
+            help="Save prompts to /debug folder instead of calling API"
+        )
+        settings.debug_mode = debug_mode
+
+        batch_processing = st.checkbox(
+            "Batch Processing",
+            value=settings.batch_processing,
+            help="Process all subtypes in one API call (useful for finding common patterns)"
+        )
+        settings.batch_processing = batch_processing
+
         st.divider()
 
     # Render current step

@@ -11,6 +11,7 @@ import pandas as pd
 
 # Handle imports for both direct execution and package import
 try:
+    from ..cost_estimator import count_tokens
     from ..file_utils import (
         detect_language,
         extract_language_from_filename,
@@ -18,9 +19,11 @@ try:
         find_translation_pair,
     )
     from ..logging_config import get_logger
+    from ..models import Document, DocumentSet
 except ImportError:
     # Running directly with streamlit, add parent to path
     sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+    from core_cartographer.cost_estimator import count_tokens
     from core_cartographer.file_utils import (
         detect_language,
         extract_language_from_filename,
@@ -28,6 +31,7 @@ except ImportError:
         find_translation_pair,
     )
     from core_cartographer.logging_config import get_logger
+    from core_cartographer.models import Document, DocumentSet
 
 logger = get_logger(__name__)
 
@@ -269,3 +273,74 @@ def extract_subtypes_from_display(
         lambda x: colored_options.get(x, x.split(" ", 1)[-1] if " " in x else x)
     )
     return df
+
+
+def dataframe_to_document_sets(
+    df: pd.DataFrame,
+    file_data: dict[str, str],
+    client_name: str,
+) -> list[DocumentSet]:
+    """
+    Convert a DataFrame to a list of DocumentSet objects for extraction.
+
+    This bridges the GUI's DataFrame-based workflow with the extractor's
+    Document-based system, preserving language and pair information.
+
+    Args:
+        df: The file dataframe with columns: Filename, Subtype, Language, Pair #
+        file_data: Dictionary mapping filenames to content.
+        client_name: Name of the client/brand.
+
+    Returns:
+        List of DocumentSet objects, one per unique subtype.
+    """
+    document_sets = []
+
+    # Group by subtype
+    subtypes = df["Subtype"].unique()
+
+    for subtype in sorted(subtypes):
+        subtype_df = df[df["Subtype"] == subtype]
+        documents = []
+        total_tokens = 0
+
+        for _, row in subtype_df.iterrows():
+            filename = row["Filename"]
+            content = file_data.get(filename, "")
+            language = row.get("Language", "UNKNOWN")
+            pair_id = row.get("Pair #", "-")
+
+            # Normalize pair_id
+            if pair_id in (None, "", "-", "nan"):
+                pair_id = None
+
+            tokens = count_tokens(content)
+            total_tokens += tokens
+
+            doc = Document(
+                filename=filename,
+                content=content,
+                language=language if language else "UNKNOWN",
+                pair_id=pair_id,
+                tokens=tokens,
+            )
+            documents.append(doc)
+
+        doc_set = DocumentSet(
+            client_name=client_name,
+            subtype=subtype,
+            documents=documents,
+            total_tokens=total_tokens,
+        )
+        document_sets.append(doc_set)
+
+        # Log summary
+        pairs = doc_set.paired_documents
+        unpaired = doc_set.unpaired_documents
+        logger.info(
+            f"Created DocumentSet for {subtype}: "
+            f"{len(documents)} docs, {len(pairs)} pairs, "
+            f"{len(unpaired)} unpaired, {total_tokens:,} tokens"
+        )
+
+    return document_sets

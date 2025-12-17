@@ -20,11 +20,12 @@ from .exceptions import (
     ExtractionError,
 )
 from .extractor import (
-    DocumentSet,
     extract_rules_and_guidelines,
+    extract_rules_and_guidelines_batch,
     save_results,
     scan_client_folder,
 )
+from .models import DocumentSet
 from .logging_config import get_logger, setup_logging
 
 console = Console()
@@ -155,16 +156,41 @@ def _process_documents(settings: Settings) -> None:
     else:
         to_process = [ds for ds in document_sets if ds.subtype == selected]
 
-    # Estimate costs
-    _display_cost_estimate(settings, to_process)
+    # Ask about debug mode
+    debug_mode = questionary.confirm(
+        "Enable debug mode? (Save prompts without calling API)",
+        default=False
+    ).ask()
 
-    # Confirm
-    if not questionary.confirm("Proceed with extraction?").ask():
-        return
+    # Ask about batch processing (only if processing multiple subtypes)
+    batch_processing = False
+    if len(to_process) > 1:
+        batch_processing = questionary.confirm(
+            "Use batch processing? (Process all subtypes in one API call)",
+            default=False
+        ).ask()
 
-    # Process each document set
-    for doc_set in to_process:
-        _process_document_set(settings, doc_set)
+    # Update settings with user choices
+    settings.debug_mode = debug_mode
+    settings.batch_processing = batch_processing
+
+    # Estimate costs (skip if debug mode)
+    if not debug_mode:
+        _display_cost_estimate(settings, to_process, batch_processing)
+
+        # Confirm
+        if not questionary.confirm("Proceed with extraction?").ask():
+            return
+    else:
+        console.print("[yellow]Debug mode enabled - no API calls will be made[/yellow]\n")
+
+    # Process documents based on mode
+    if batch_processing and len(to_process) > 1:
+        _process_document_sets_batch(settings, to_process)
+    else:
+        # Process each document set individually
+        for doc_set in to_process:
+            _process_document_set(settings, doc_set)
 
 
 def _display_document_summary(document_sets: list[DocumentSet]) -> None:
@@ -184,14 +210,28 @@ def _display_document_summary(document_sets: list[DocumentSet]) -> None:
     console.print(table)
 
 
-def _display_cost_estimate(settings: Settings, document_sets: list[DocumentSet]) -> None:
+def _display_cost_estimate(
+    settings: Settings,
+    document_sets: list[DocumentSet],
+    batch_processing: bool = False,
+) -> None:
     """Display cost estimate for processing."""
     total_input_tokens = sum(ds.total_tokens for ds in document_sets)
 
     # Add estimated tokens for examples and instructions
     # These are larger now due to comprehensive examples
     example_tokens = 5000  # Rough estimate for examples + instructions
-    total_input_tokens += example_tokens * len(document_sets)
+
+    if batch_processing:
+        # In batch mode, examples/instructions are included once
+        total_input_tokens += example_tokens
+        console.print("\n[bold cyan]Batch Processing Mode:[/bold cyan]")
+        console.print("  All subtypes will be processed in one API call")
+    else:
+        # In individual mode, examples/instructions per subtype
+        total_input_tokens += example_tokens * len(document_sets)
+        console.print("\n[bold cyan]Individual Processing Mode:[/bold cyan]")
+        console.print(f"  {len(document_sets)} separate API call(s)")
 
     # Estimate output tokens (rules + guidelines are substantial)
     estimated_output_tokens = int(total_input_tokens * 0.5)
@@ -249,6 +289,11 @@ def _process_document_set(settings: Settings, doc_set: DocumentSet) -> None:
         f"{result.output_tokens:,} output[/dim]"
     )
 
+    # Skip save in debug mode
+    if settings.debug_mode:
+        console.print("\n[yellow]Debug mode - prompt saved, skipping result save[/yellow]")
+        return
+
     # Confirm save
     if not questionary.confirm("Save these results?").ask():
         console.print("[yellow]Results discarded.[/yellow]")
@@ -259,6 +304,77 @@ def _process_document_set(settings: Settings, doc_set: DocumentSet) -> None:
     console.print(f"[green]✓[/green] Saved: {rules_path}")
     console.print(f"[green]✓[/green] Saved: {guidelines_path}")
     logger.info(f"Results saved to {rules_path.parent}")
+
+
+def _process_document_sets_batch(settings: Settings, doc_sets: list[DocumentSet]) -> None:
+    """Process multiple document sets in batch mode (one API call)."""
+    console.print(f"\n[bold]Processing {len(doc_sets)} subtypes in batch mode...[/bold]")
+    logger.info(f"Processing {len(doc_sets)} document sets in batch")
+
+    try:
+        results = extract_rules_and_guidelines_batch(settings, doc_sets)
+    except ExtractionError as e:
+        console.print(f"[red]Batch extraction failed:[/red] {e}")
+        logger.error(f"Batch extraction failed: {e}")
+        return
+    except CartographerError as e:
+        console.print(f"[red]Error:[/red] {e}")
+        logger.error(f"Error during batch extraction: {e}")
+        return
+
+    # Process and display results for each subtype
+    for doc_set in doc_sets:
+        subtype = doc_set.subtype
+        if subtype not in results:
+            console.print(f"[yellow]No results for {subtype}[/yellow]")
+            continue
+
+        result = results[subtype]
+
+        console.print(f"\n[bold green]Results for {subtype}:[/bold green]")
+
+        # Display preview of client_rules.js
+        console.print("\n[bold green]Client Rules Preview:[/bold green]")
+        rules_preview = (
+            result.client_rules[:1500] + "\n// ... (truncated)"
+            if len(result.client_rules) > 1500
+            else result.client_rules
+        )
+        syntax = Syntax(rules_preview, "javascript", theme="monokai", line_numbers=True)
+        console.print(Panel(syntax, title=f"{subtype}/client_rules.js"))
+
+        # Display preview of guidelines.md
+        console.print("\n[bold green]Guidelines Preview:[/bold green]")
+        guidelines_preview = (
+            result.guidelines[:1500] + "\n\n... (truncated)"
+            if len(result.guidelines) > 1500
+            else result.guidelines
+        )
+        console.print(Panel(Markdown(guidelines_preview), title=f"{subtype}/guidelines.md"))
+
+        # Show token usage
+        console.print(
+            f"\n[dim]Tokens used: {result.input_tokens:,} input, "
+            f"{result.output_tokens:,} output[/dim]"
+        )
+
+    # Confirm save for all
+    if settings.debug_mode:
+        console.print("\n[yellow]Debug mode - prompts saved, skipping result save[/yellow]")
+        return
+
+    if not questionary.confirm("Save all results?").ask():
+        console.print("[yellow]Results discarded.[/yellow]")
+        return
+
+    # Save all results
+    for doc_set in doc_sets:
+        subtype = doc_set.subtype
+        if subtype in results:
+            rules_path, guidelines_path = save_results(settings, doc_set, results[subtype])
+            console.print(f"[green]✓[/green] Saved {subtype}: {rules_path}")
+            console.print(f"[green]✓[/green] Saved {subtype}: {guidelines_path}")
+            logger.info(f"Results saved to {rules_path.parent}")
 
 
 if __name__ == "__main__":

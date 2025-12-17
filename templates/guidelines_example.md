@@ -1,101 +1,120 @@
-# German Localisation Guidelines for dundle Content
+# German Localization Guidelines for dundle
 
-## Purpose
-
-This document provides qualitative guidance for localising English dundle content for the German market. It covers tone, voice, cultural context, and content philosophy. These guidelines apply to ANY product or content type.
-
-For specific terminology, formatting rules, and checklists, refer to the accompanying Glossary document.
+> **Purpose**: This guide enables writers and LLMs to create German content that matches dundle's brand voice, style, and cultural expectations. Use alongside `client_rules.js` for automated validation.
 
 ---
 
-## 1. Core Philosophy: Localisation, Not Translation
+## 1. Purpose & Scope
 
-**German content is an adaptation, not a direct translation.**
+**What this covers**: German localization of dundle product pages, marketing content, and customer-facing copy for the DACH market (Germany, Austria, Switzerland).
 
-The German reader has different expectations, cultural context, and information needs. Successful localisation means:
+**Content types**: Product descriptions, FAQ sections, benefit lists, CTAs, meta tags, and instructional content.
 
-- **Restructuring** content for German reading preferences (scannability, directness)
-- **Adding** market-specific information (fees, regulations, German payment methods)
-- **Condensing** where English is verbose, expanding where German readers need detail
-- **Adapting** tone to match German digital commerce expectations
-
-> **Key insight:** German versions are typically 10-20% different in structure. Some sections will be shorter (introductions), others longer (fee explanations, step-by-step instructions).
+**Key principle**: German content is an **adaptation**, not a direct translation. Structure, emphasis, and detail level should match German reader expectations.
 
 ---
 
-## 2. Brand Voice & Personality
+## 2. Core Philosophy
 
-### 2.1 Overall Tone
+### Localization vs Translation
 
-dundle speaks to German customers as a **knowledgeable friend** who understands digital products and online payments. The tone balances:
+German readers have different information needs and reading patterns. Successful localization means:
 
-| Quality | Expression |
-|---------|------------|
-| **Confident** | We know our products; we state facts clearly |
-| **Helpful** | We anticipate questions and provide solutions |
-| **Direct** | We get to the point; we don't waste time |
-| **Reassuring** | We emphasise security without being alarmist |
-| **Modern** | We're comfortable with digital; we don't over-explain basics |
+| Aspect | What to Do |
+|--------|------------|
+| **Restructure** | Adapt for scannability and directness |
+| **Expand** | Add detail where Germans expect it (fees, steps, regulations) |
+| **Condense** | Shorten where English is verbose (marketing fluff) |
+| **Adapt tone** | Match German digital commerce expectations |
 
-### 2.2 Emotional Register
+**Typical result**: German versions differ 10-20% in structure from English source.
 
-German digital commerce copy tends toward the **pragmatic** rather than the **promotional**.
+### Example Transformation
 
-**Avoid:**
-- Excessive enthusiasm ("Amazing!", "Incredible!")
-- Hyperbole ("The best ever!")
-- Pressure tactics ("Don't miss out!", "Limited time!")
+**English (verbose, promotional)**:
+> Looking to top up your account without using a credit card? Buy a gift card and add prepaid credit quickly and securely!
 
-**Instead, convey value through:**
+**German (direct, specific)**:
+> Möchtest du dein Konto aufladen? Bei dundle kaufst du bequem mit PayPal, Klarna oder 15 weiteren Zahlungsarten.
+
+**What changed**:
+- Shorter question (direct to the point)
+- Named specific payment methods (concrete value)
+- "bequem" as key benefit (practical, not promotional)
+- Removed exclamation-heavy enthusiasm
+
+---
+
+## 3. Brand Voice
+
+### Tone Profile
+
+dundle speaks as a **knowledgeable friend** who understands digital products:
+
+| Quality | How to Express |
+|---------|----------------|
+| **Confident** | State facts clearly, no hedging |
+| **Helpful** | Anticipate questions, provide solutions |
+| **Direct** | Get to the point, respect reader's time |
+| **Reassuring** | Emphasize security without being alarmist |
+| **Modern** | Comfortable with digital, don't over-explain basics |
+
+### Emotional Register
+
+German digital commerce copy is **pragmatic**, not **promotional**.
+
+**Avoid**:
+- Excessive enthusiasm: "Amazing!", "Incredible!", "Wow!"
+- Hyperbole: "The best ever!", "Unbeatable!"
+- Pressure tactics: "Don't miss out!", "Limited time!", "Hurry!"
+
+**Instead, convey value through**:
 - Clarity about benefits
-- Concrete examples
+- Concrete examples with numbers
 - Practical information
-- Trustworthy tone
+- Trustworthy, straightforward tone
 
-### 2.3 Tone Transformation Example
+### Voice Examples
 
-**English style:**
-> "Looking to top up your account without using a credit card? Buy a gift card and add prepaid credit quickly and securely!"
-
-**German style:**
-> "Möchtest du dein Konto aufladen? Bei dundle kaufst du bequem mit PayPal, Klarna Sofortüberweisung oder 15 weiteren Zahlungsarten."
-
-Notice how German:
-- Asks a shorter, more direct question
-- Names specific payment methods immediately
-- Uses "bequem" (convenient) as the key value
-- Reduces exclamation-heavy enthusiasm
+| Situation | Avoid | Use Instead |
+|-----------|-------|-------------|
+| Introducing product | "Get ready for an amazing experience!" | "Mit diesem Gutschein erhältst du sofort Zugang." |
+| Highlighting speed | "Lightning-fast delivery!" | "Sofort per E-Mail, in Sekunden einlösbar." |
+| Encouraging action | "Don't wait, buy now!" | "Jetzt kaufen und direkt einlösen." |
 
 ---
 
-## 3. Writing Style
+## 4. Writing Style
 
-### 3.1 Address: The "du" Decision
+### Address: Always "du"
 
-dundle uses **informal "du"** throughout all German content. This is a deliberate brand choice that:
-
+dundle uses **informal "du"** throughout all German content. This is deliberate:
 - Creates approachability
-- Matches the digital-native audience expectation
+- Matches digital-native audience expectations
 - Aligns with modern German e-commerce conventions
 
-**Never mix "du" and "Sie"** within any piece of content. Maintain consistency in all verb conjugations and possessives.
+**Rule**: Never mix "du" and "Sie". Maintain consistency in ALL verb conjugations and possessives.
 
-### 3.2 Sentence Structure Preferences
+**Correct**: "Gib deinen Code ein und bestätige deine E-Mail."
+**Wrong**: "Geben Sie Ihren Code ein und bestätige deine E-Mail."
+
+> **Note**: All formal address forms (Sie, Ihnen, Ihr, etc.) are flagged by the Code Checker. See `client_rules.js` → `forbidden_words`.
+
+### Sentence Structure
 
 German readers scanning product pages prefer:
-
-- **Shorter sentences** than typical English marketing copy
+- **Shorter sentences** than typical English marketing
 - **Front-loaded information** (key point first, context second)
 - **Active voice** with clear subjects
 - **Specific details** over vague promises
 
-**Instead of:**
-> "With our amazing service, you can easily and quickly purchase products that will be delivered to your inbox instantly, allowing you to start using them right away!"
+**Transformation example**:
 
-**Write:**
-> "Bei dundle erhältst du deinen Code sofort per E-Mail. Direkt einlösbar, ohne Wartezeit."
+| English | German |
+|---------|--------|
+| "With our amazing service, you can easily and quickly purchase products that will be delivered to your inbox instantly, allowing you to start using them right away!" | "Bei dundle erhältst du deinen Code sofort per E-Mail. Direkt einlösbar, ohne Wartezeit." |
 
-### 3.3 Questions as Openers
+### Questions as Section Openers
 
 German pages frequently use rhetorical questions to open sections:
 
@@ -103,231 +122,257 @@ German pages frequently use rhetorical questions to open sections:
 - "Suchst du...?" (Are you looking for...?)
 - "Brauchst du...?" (Do you need...?)
 
-Follow immediately with dundle as the solution. This creates a conversational flow without being pushy.
+**Pattern**: Question → dundle as solution
 
-**Pattern:**
-> "Möchtest du [desired outcome]? Dann bist du bei dundle genau richtig!"
+> "Möchtest du dein Konto aufladen? Dann bist du bei dundle genau richtig!"
 
-### 3.4 Conveying Urgency Without Pressure
+### Conveying Urgency
 
-German readers respond to **practical urgency** (speed, convenience) rather than **artificial urgency** (scarcity, FOMO).
+German readers respond to **practical urgency** (speed, convenience), not **artificial urgency** (scarcity, FOMO).
 
-**Effective urgency signals:**
+**Effective**:
 - "Sofort per E-Mail" (Instant via email)
 - "Direkt einlösbar" (Immediately redeemable)
 - "In Sekunden" (In seconds)
 - "24/7 verfügbar" (Available 24/7)
 
-**Avoid:**
+**Avoid**:
 - "Nur noch heute!" (Only today!)
 - "Beeile dich!" (Hurry up!)
 - "Limitiertes Angebot" (Limited offer)
 
 ---
 
-## 4. Content Structure Philosophy
+## 5. Content Structure
 
-### 4.1 The German Reader's Journey
+### German Reader Journey
 
-German product page readers typically:
+Typical reading pattern for product pages:
 
-1. **Scan the headline** - Is this what I'm looking for?
-2. **Check the price/availability** - Can I get this?
-3. **Read the intro** - Quick confirmation this is right
-4. **Jump to FAQ** - Specific questions answered
-5. **Return to instructions** - How exactly do I do this?
+1. **Scan headline** → Is this what I'm looking for?
+2. **Check price/availability** → Can I get this?
+3. **Read intro** → Quick confirmation
+4. **Jump to FAQ** → Specific questions
+5. **Return to instructions** → How exactly do I do this?
 
-Structure content to support this **non-linear reading pattern**:
+**Structure content for non-linear reading**: Clear headings, self-contained sections, scannable formats.
 
-- Clear, scannable headings
-- Self-contained sections
-- FAQ that answers real questions
-- Instructions in numbered steps
+### Required Sections
 
-### 4.2 The "Vorteile" (Benefits) Section
+| Section | Purpose | Format |
+|---------|---------|--------|
+| **Intro paragraph** | Quick value summary | 2-3 sentences, front-load key benefit |
+| **Benefits (Vorteile)** | Trust signals, differentiation | Bullet points, standalone statements |
+| **How to use** | Step-by-step instructions | Numbered list, end with "Fertig!" |
+| **FAQ** | Answer real questions | Natural questions, direct answers |
 
-German pages should include a dedicated benefits section. This serves as:
-
-- Quick value summary for scanners
-- Trust signals (official partner, instant delivery)
-- Differentiation (why dundle vs alternatives)
-
-Present as bullet points, not prose. Each bullet should be a complete, standalone value statement.
-
-### 4.3 Instruction Depth
+### Instruction Depth
 
 German readers expect **detailed, practical instructions**.
 
-**English style:**
+**English style**:
 > "Redeem your code on the platform's website."
 
-**German style:**
-> 1. Besuche die Einlöseseite.
-> 2. Gib deinen Code ein.
+**German style**:
+> 1. Besuche die Einlöseseite unter [URL].
+> 2. Gib deinen 16-stelligen Code ein.
 > 3. Bestätige deine Eingabe.
-> 4. Fertig! Das Guthaben wurde deinem Konto gutgeschrieben.
+> 4. Fertig! Das Guthaben wurde gutgeschrieben.
 
-The "Fertig!" (Done!) at the end provides psychological closure and confirmation of success.
+**Key elements**:
+- Numbered steps (not prose)
+- Specific details (16-digit code, not just "code")
+- "Fertig!" at the end for psychological closure
 
-### 4.4 Multiple Methods = Multiple Sections
-
-If there are multiple ways to accomplish something (App vs Website, Direct vs Account), **always separate them** with clear headers. German readers prefer explicit options over having to figure out which path applies to them.
+> **Note**: List ending phrases are validated by Code Checker. See `client_rules.js` → `patterns.list_endings`.
 
 ---
 
-## 5. Cultural & Market Context
+## 6. Cultural Context
 
-### 5.1 Payment Method Priorities
+### Payment Method Priorities
 
-German consumers have distinct payment preferences. When mentioning payment options, prioritise:
+German consumers have distinct preferences. When mentioning payment options, prioritize:
 
-1. **PayPal** - Most trusted online payment in Germany
-2. **Klarna Sofortüberweisung** - German-specific, widely used
-3. **Apple Pay** - Growing rapidly
-4. **Handyrechnung** (mobile billing) - Popular for digital goods
+1. **PayPal** – Most trusted online payment in Germany
+2. **Klarna Sofortüberweisung** – German-specific, widely used
+3. **Apple Pay** – Growing rapidly
+4. **Handyrechnung** – Popular for digital goods
 
-Credit cards are less common in Germany than UK/US. Emphasise alternatives.
+**Note**: Credit cards are less common than in UK/US. Emphasize alternatives.
 
-### 5.2 Security & Privacy Consciousness
+### Privacy & Security
 
-German consumers are **particularly privacy-conscious**. Effective reassurance includes:
+German consumers are particularly privacy-conscious. Effective reassurance:
 
 - "Ohne Bank- oder Kreditkartendaten teilen zu müssen"
 - "Sicher und anonym bezahlen"
 - "Volle Kostenkontrolle"
 - "Keine Weitergabe persönlicher Daten"
 
-This isn't fear-mongering; it's acknowledging a genuine cultural value.
+This isn't fear-mongering—it acknowledges a genuine cultural value.
 
-### 5.3 Fee Transparency Expectations
+### Fee Transparency
 
-German readers expect **explicit fee information**. Vague statements like "fees may apply" are insufficient.
+German readers expect **explicit fee information**. Vague statements are insufficient.
 
-**Provide:**
+**Provide**:
 - Specific percentages where applicable
 - Concrete euro examples when helpful
 - When fees apply (conditions, time periods)
 - What's included vs extra
 
-This builds trust rather than creating suspicion.
+**Example**:
+> "Die Einlösegebühr beträgt 10%. Bei einem Gutschein über 50 € erhältst du 45 € Guthaben."
 
-### 5.4 Regional Awareness
+### Regional Awareness
 
-German readers need to know:
+Address regional considerations proactively:
 
-- Whether products work in Germany/Austria/Switzerland
-- If codes or products are region-locked
+- Does this work in Germany/Austria/Switzerland?
+- Are codes region-locked?
 - Currency implications (EUR vs other)
-- Whether German customer service is available
-
-Address regional restrictions proactively, not as an afterthought.
+- Is German customer service available?
 
 ---
 
-## 6. Content Type Tone Adjustments
+## 7. Content Type Variations
 
-Different content types warrant subtle tone shifts:
+### Payment/Financial Products
 
-### 6.1 Payment/Financial Products
-**Tone:** Trustworthy, security-focused, slightly more formal
-**Emphasis:** Privacy, anonymity, accepted platforms, fee transparency
+**Tone**: Trustworthy, security-focused, slightly more formal within "du" context
+**Emphasis**: Privacy, anonymity, accepted platforms, fee transparency
 
-### 6.2 Gift Products
-**Tone:** Friendly, gift-oriented, convenience-focused
-**Emphasis:** Flexibility, ease of gifting, recipient experience
+**Example intro**:
+> "Mit Paysafecard bezahlst du online sicher und anonym – ganz ohne Bankdaten. Ideal für alle, die ihre Privatsphäre schützen möchten."
 
-### 6.3 Gaming Products
-**Tone:** Enthusiastic (within German norms), community-aware
-**Emphasis:** What you can do with it, compatibility, value
+### Gift Products
 
-### 6.4 Technical/Complex Products
-**Tone:** Informative, clear about requirements
-**Emphasis:** Prerequisites, step-by-step guidance, troubleshooting
+**Tone**: Friendly, gift-oriented, convenience-focused
+**Emphasis**: Flexibility, ease of gifting, recipient experience
+
+**Example intro**:
+> "Ein Geschenk, das immer passt: Mit dem [Brand] Gutschein kann sich der Beschenkte selbst aussuchen, was er möchte."
+
+### Gaming Products
+
+**Tone**: Enthusiastic (within German norms), community-aware
+**Emphasis**: What you can do with it, compatibility, value
+
+**Example intro**:
+> "Hol dir V-Bucks für Fortnite und sichere dir die neuesten Skins, Emotes und den Battle Pass."
 
 ---
 
-## 7. FAQ Writing Philosophy
+## 8. FAQ Writing
 
-### 7.1 Question Formulation
+### Question Formulation
 
-German FAQs use natural question forms:
+Use natural German question forms:
 
 - "Wie kann ich...?" (How can I...?)
 - "Wie lange ist...?" (How long is...?)
 - "Gibt es...?" (Are there...?)
 - "Was passiert, wenn...?" (What happens if...?)
 
-Avoid overly formal or robotic question structures.
-
-### 7.2 Answer Style
+### Answer Style
 
 FAQ answers should:
+1. Start with direct answer (Yes/No if applicable)
+2. Provide necessary context
+3. Include specific numbers/details
+4. End with action or resource link if helpful
 
-- Start with a direct answer (Yes/No if applicable)
-- Provide necessary context
-- Include specific numbers/details
-- End with action or resource link if helpful
-
-**Strong answer:**
+**Strong answer**:
 > **Wie lange ist mein Code gültig?**
-> Dein Code ist ab dem Kaufdatum 5 Jahre lang gültig.
+> Dein Code ist ab dem Kaufdatum 5 Jahre lang gültig. Du findest das genaue Ablaufdatum auf deiner Bestätigungs-E-Mail.
 
-**Weak answer:**
+**Weak answer**:
 > **Wie lange ist mein Code gültig?**
 > Die Gültigkeitsdauer variiert. Bitte prüfen Sie die Bedingungen.
 
-### 7.3 German-Market Questions
+(Also wrong because it uses "Sie"!)
 
-Include FAQ questions that address German-specific concerns:
+### German-Specific FAQ Topics
 
-- Regional restrictions/currency questions
+Include questions that address German concerns:
+
+- Regional restrictions/currency
 - German payment method availability
-- German customer service availability
-- German regulatory context (if relevant)
+- German customer service contact
+- Privacy/data handling
+- Fee breakdown
 
 ---
 
-## 8. Handling Edge Cases
+## 9. Edge Cases
 
-### 8.1 When Only English/Foreign Interface Exists
+### Foreign Interface Terms
 
-Some platforms don't have German interfaces. Handle by:
+When platforms don't have German interfaces:
 
-- Keeping the original interface terms
-- Providing German translation in parentheses: "Redeem" (dt. Einlösen)
-- Noting language limitation if significant
+- Keep original interface terms
+- Provide German translation in parentheses: `"Redeem" (dt. Einlösen)`
+- Note language limitation if significant
 
-### 8.2 When German Term Doesn't Exist
+### English Terms That Stay English
 
-Some English terms are standard even in German contexts. Don't force awkward translations. Use the English term when it's:
+Some English terms are standard even in German contexts. Don't force awkward translations when the English term is:
 
 - Industry standard in German
 - How German users actually search
-- Clearer than a translation
+- Clearer than any translation
 
-### 8.3 When Content Should Differ Significantly
+**Examples**: "Download", "Code", "App", "Account" (though "Konto" also works)
 
-Sometimes the German market genuinely needs different content. This is acceptable when:
+### Content That Should Differ Significantly
+
+Sometimes German market genuinely needs different content:
 
 - Legal/regulatory requirements differ
 - Product features differ by region
 - Cultural context requires different emphasis
 
-Don't force English structure onto content that should be fundamentally different.
+**Don't force English structure onto content that should be fundamentally different.**
 
 ---
 
-## 9. Quality Signals
+## 10. Quality Signals
 
-High-quality German localisation demonstrates:
+High-quality German localization demonstrates:
 
-- Natural German flow (doesn't read like a translation)
-- Appropriate formality level (du, not Sie)
-- German-market payment methods prominently featured
-- Fee/cost information is specific and concrete
-- Instructions are step-by-step with clear endpoints
-- FAQs address German-specific concerns
-- Regional information is clear and upfront
-- Benefits section exists with bullet points
-- Tone matches content type expectations
-- Links point to German resources where available
+| Signal | Check |
+|--------|-------|
+| Natural flow | Doesn't read like a translation |
+| Correct address | "du" throughout, never "Sie" |
+| Payment methods | German options prominently featured |
+| Fee information | Specific, concrete numbers |
+| Instructions | Step-by-step with clear endpoints |
+| FAQs | Address German-specific concerns |
+| Regional info | Clear and upfront |
+| Benefits section | Exists, uses bullet points |
+| Tone match | Appropriate for content type |
+| Links | Point to German resources |
+
+### Self-Review Checklist
+
+Before finalizing any content:
+
+- [ ] All "Sie" forms removed? (Check Code Checker output)
+- [ ] Payment methods include PayPal, Klarna?
+- [ ] Fees explicitly stated with examples?
+- [ ] Numbered lists end with "Fertig!" or equivalent?
+- [ ] Currency format is "X €" (number + space + symbol)?
+- [ ] Meta title ≤ 60 characters?
+- [ ] Meta description ≤ 154 characters?
+- [ ] FAQ answers are direct and specific?
+
+---
+
+## Reference
+
+For machine-validated rules, see `client_rules.js`:
+- `forbidden_words`: Terms that trigger validation errors
+- `terminology`: Required translations
+- `patterns`: Format validation (currency, dates, lists)
+- `lengths`: Character limits
