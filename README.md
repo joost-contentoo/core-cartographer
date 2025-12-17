@@ -100,6 +100,25 @@ cp .env.example .env
 
 ## Usage
 
+### GUI (Recommended)
+
+```bash
+streamlit run src/core_cartographer/gui.py
+# or
+cartographer-gui
+```
+
+**Streamlit GUI features:**
+- 🖱️ Drag & drop file uploads
+- 💰 Real-time cost estimates
+- 📊 Visual document summaries
+- 🎨 Syntax-highlighted previews
+- ⬇️ One-click downloads
+
+See [GUI_QUICKSTART.md](GUI_QUICKSTART.md) for details.
+
+### CLI (Alternative)
+
 ```bash
 cartographer
 ```
