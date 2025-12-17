@@ -20,6 +20,7 @@ from .exceptions import (
     ExtractionError,
 )
 from .extractor import (
+    estimate_prompt_tokens,
     extract_rules_and_guidelines,
     extract_rules_and_guidelines_batch,
     save_results,
@@ -216,20 +217,20 @@ def _display_cost_estimate(
     batch_processing: bool = False,
 ) -> None:
     """Display cost estimate for processing."""
-    total_input_tokens = sum(ds.total_tokens for ds in document_sets)
+    # Get client name from first document set
+    client_name = document_sets[0].client_name if document_sets else "unknown"
 
-    # Add estimated tokens for examples and instructions
-    # These are larger now due to comprehensive examples
-    example_tokens = 5000  # Rough estimate for examples + instructions
-
-    if batch_processing:
-        # In batch mode, examples/instructions are included once
-        total_input_tokens += example_tokens
+    # Calculate estimated input tokens dynamically
+    if batch_processing and len(document_sets) > 1:
+        # Batch mode: one prompt for all subtypes
+        total_input_tokens = estimate_prompt_tokens(client_name, document_sets, settings)
         console.print("\n[bold cyan]Batch Processing Mode:[/bold cyan]")
         console.print("  All subtypes will be processed in one API call")
     else:
-        # In individual mode, examples/instructions per subtype
-        total_input_tokens += example_tokens * len(document_sets)
+        # Individual mode: separate prompts per subtype
+        total_input_tokens = 0
+        for doc_set in document_sets:
+            total_input_tokens += estimate_prompt_tokens(client_name, [doc_set], settings)
         console.print("\n[bold cyan]Individual Processing Mode:[/bold cyan]")
         console.print(f"  {len(document_sets)} separate API call(s)")
 

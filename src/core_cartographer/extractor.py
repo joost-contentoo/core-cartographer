@@ -4,6 +4,7 @@ This module handles the extraction of validation rules and localization
 guidelines from document collections using Claude's API.
 """
 
+import json
 import re
 from datetime import datetime
 from pathlib import Path
@@ -37,104 +38,97 @@ YOUR OUTPUTS:
 1. client_rules.js - Machine-readable validation config (consumed by automated Code Checker)
 2. guidelines.md - Human-readable style guide (used by LLMs and humans to write new content in the client's voice)
 
-IMPORTANT CONTEXT:
-• The client_rules.js powers automated validation - rules must be precise and evidenced
-• The guidelines.md will be used by an LLM to generate new content - it must capture tone, style, and nuance that can't be codified in rules
-• Documents may contain metadata, navigation, or internal notes - FOCUS ONLY ON ACTUAL COPY (headlines, paragraphs, FAQs, CTAs, benefit lists)"""
+CRITICAL DISTINCTION:
+• client_rules.js = STRICT validation rules. Must be precise, evidenced, codifiable. When uncertain, OMIT.
+• guidelines.md = QUALITATIVE style guide. Captures tone, voice, nuance even when not codifiable. Can include observations with moderate confidence."""
 
 
 def _build_output_spec_section(settings: Settings) -> str:
     """Build the output specification section with annotated examples."""
-    # Load the annotated example templates
-    client_rules_example = settings.client_rules_example_path.read_text(encoding="utf-8")
-    guidelines_example_path = settings.guidelines_example_path
+    # Try condensed template first, fall back to verbose if it doesn't exist
+    condensed_rules_path = settings.templates_dir / "client_rules_example_condensed.js"
+    if condensed_rules_path.exists():
+        client_rules_example = condensed_rules_path.read_text(encoding="utf-8")
+    else:
+        client_rules_example = settings.client_rules_example_path.read_text(encoding="utf-8")
 
-    # Read guidelines structure (first ~100 lines for structure overview)
-    guidelines_content = guidelines_example_path.read_text(encoding="utf-8")
-    guidelines_lines = guidelines_content.split("\n")
-
-    # Extract just the section headers for overview
-    section_headers = [
-        line for line in guidelines_lines
-        if line.startswith("## ") and not line.startswith("### ")
-    ][:12]  # First 12 top-level sections
-
-    guidelines_structure = "\n".join(section_headers)
+    # Try condensed guidelines template
+    condensed_guidelines_path = settings.templates_dir / "guidelines_example_condensed.md"
+    if condensed_guidelines_path.exists():
+        guidelines_template = condensed_guidelines_path.read_text(encoding="utf-8")
+    else:
+        # Fall back to just headers from full template
+        guidelines_example_path = settings.guidelines_example_path
+        guidelines_content = guidelines_example_path.read_text(encoding="utf-8")
+        guidelines_lines = guidelines_content.split("\n")
+        section_headers = [
+            line for line in guidelines_lines
+            if line.startswith("## ") and not line.startswith("### ")
+        ][:12]
+        guidelines_template = "\n".join(section_headers)
 
     return f"""
 ═══════════════════════════════════════════════════════════════════════════════
-OUTPUT 1: client_rules.js
+OUTPUT TEMPLATES
 ═══════════════════════════════════════════════════════════════════════════════
 
-Follow this exact structure. Each section has comments explaining what to extract and evidence requirements:
-
+Output 1: client_rules.js
 ```javascript
 {client_rules_example}
 ```
 
-═══════════════════════════════════════════════════════════════════════════════
-OUTPUT 2: guidelines.md
-═══════════════════════════════════════════════════════════════════════════════
+Output 2: guidelines.md (follow this structure and guidance)
+```markdown
+{guidelines_template}
+```
 
-Create a comprehensive style guide with these REQUIRED sections:
-
-{guidelines_structure}
-
-GUIDELINES PRINCIPLES:
-• Show, don't just tell - include BEFORE/AFTER transformation examples
-• Be specific - "friendly" is vague, "use du, never Sie" is actionable
-• Explain WHY - the reasoning helps LLMs generalize to new situations
-• Cross-reference client_rules.js for hard constraints
-• Each section: 300-500 words max, prioritize examples over prose
-• Total target: 4,000-6,000 words"""
+CRITICAL: Replace all placeholders ([CLIENT_NAME], [TARGET_LANGUAGE], etc.) with actual values from the documents you're analyzing."""
 
 
 def _build_extraction_rules_section(has_pairs: bool) -> str:
     """Build the extraction rules section with evidence thresholds."""
     terminology_note = """
 ✓ TERMINOLOGY (source+target pairs available)
-  • Terms translated consistently 3+ times
-  • Include 'context' when same source word has multiple target translations
-  Evidence needed: 3+ consistent translation occurrences"""
+  Evidence: 3+ occurrences across ALL document text (includes repetitions within docs)
+  Include 'context' field when same source has multiple valid targets"""
 
     if not has_pairs:
         terminology_note = """
-⚠ TERMINOLOGY (no source+target pairs available)
-  • Cannot extract terminology mappings without paired documents
-  • Leave terminology array empty or minimal
-  • Focus on other extraction areas instead"""
+⚠ TERMINOLOGY (no source+target pairs)
+  Cannot extract without paired documents - leave array empty or minimal"""
 
     return f"""
-WHAT TO EXTRACT:
+═══════════════════════════════════════════════════════════════════════════════
+EXTRACTION RULES & EVIDENCE THRESHOLDS
+═══════════════════════════════════════════════════════════════════════════════
 
-✓ FORBIDDEN_WORDS
-  • Formal address forms when informal is used throughout
-  • Competitor names never mentioned
-  • Negative/pressure language consistently absent
-  Evidence needed: Conspicuous absence across ALL documents
+FORBIDDEN_WORDS
+  What: Formal address (Sie vs du), competitor names, pressure language
+  Evidence: Conspicuous absence across ALL documents
+
 {terminology_note}
 
-✓ PATTERNS
-  • Currency formatting (€5 vs 5 € vs 5,00 €)
-  • Date formats (DD.MM.YYYY vs other)
-  • List closure phrases ("Fertig!", "Das war's!")
-  • Number formatting (1.000 vs 1,000)
-  Evidence needed: 80%+ consistency across occurrences
+PATTERNS
+  What: Currency (€5 vs 5 €), dates (DD.MM vs DD/MM), list endings, numbers
+  Evidence: 80%+ consistency across occurrences
 
-✓ LENGTHS
-  • Meta titles/descriptions (observe actual limits)
-  • Body paragraph lengths (if consistent limits visible)
-  Evidence needed: Observable limits in document structure
+LENGTHS
+  What: Meta titles/descriptions, paragraph/FAQ lengths
+  Evidence: Observable limits in document structure
 
-✓ STRUCTURE
-  • Tags/sections present in every document
-  Evidence needed: 100% presence across documents
+STRUCTURE
+  What: Required tags/sections
+  Evidence: 100% presence across documents
 
-QUALITY THRESHOLD:
-• Only include rules with EVIDENCE from documents
-• When uncertain, OMIT rather than guess
-• Patterns must be CONSISTENT, not one-offs
-• For guidelines: capture tone and nuance even when not codifiable as rules"""
+CLIENT_RULES.JS QUALITY STANDARD:
+→ Every rule needs EVIDENCE from documents
+→ Uncertain? OMIT from client_rules.js (strict validation requires precision)
+→ Patterns must be CONSISTENT, not one-offs
+
+GUIDELINES.MD QUALITY STANDARD:
+→ Capture tone, voice, style even if not codifiable
+→ Can include observations with moderate confidence
+→ Explain WHY for each guideline (helps LLMs generalize)"""
 
 
 def _build_content_focus_section() -> str:
@@ -249,26 +243,56 @@ Respond with:
 
     return f"""
 ═══════════════════════════════════════════════════════════════════════════════
-RESPONSE FORMAT
+RESPONSE FORMAT (BATCH PROCESSING)
 ═══════════════════════════════════════════════════════════════════════════════
 
-Respond with SEPARATE outputs for EACH subtype:
+You are analyzing MULTIPLE subtypes together. This allows you to identify:
+• **COMMON patterns** - Rules that apply across all subtypes
+• **SUBTYPE-SPECIFIC patterns** - Rules unique to one subtype
+
+BATCH PROCESSING STRATEGY:
+
+1. **First Pass**: Analyze all documents to identify COMMON patterns
+   - Forbidden words used consistently across all subtypes
+   - Terminology translated the same way everywhere
+   - Patterns (currency, dates) that are universal
+   - Tone and voice that's consistent
+
+2. **Second Pass**: Identify SUBTYPE-SPECIFIC patterns
+   - Different address forms (du vs Sie in different contexts)
+   - Subtype-specific terminology
+   - Length constraints that vary by subtype
+   - Different structure requirements
+
+3. **Output Decision**: For each rule, decide:
+   - If COMMON → Include in EVERY subtype's client_rules.js
+   - If SPECIFIC → Include only in the relevant subtype's client_rules.js
+   - When uncertain → Err on the side of including (can always remove)
+
+4. **Guidelines Approach**:
+   - Core voice/philosophy → Should be COMMON across subtypes
+   - Content type variations → May differ by subtype (e.g., "game_card" vs "subscription")
+   - When in doubt → Include common guidance, note variations where observed
+
+RESPONSE FORMAT - Separate output for EACH subtype:
 
 ## SUBTYPE: [subtype_name]
 
 ### CLIENT_RULES
 
 ```javascript
-[Complete client_rules.js following the annotated template above]
+[Complete client_rules.js - include both COMMON and SUBTYPE-SPECIFIC rules]
 ```
 
 ### GUIDELINES
 
-[Complete guidelines.md following the structure above - NO code fence]
+[Complete guidelines.md - include common voice plus subtype-specific variations]
 
 ---
 
-(Repeat for each subtype: {', '.join(subtype_names)})"""
+(Repeat for each subtype: {', '.join(subtype_names)})
+
+IMPORTANT: Generate COMPLETE, STANDALONE outputs for each subtype. Don't cross-reference between subtypes in the output."""
 
 
 def build_extraction_prompt(
@@ -292,13 +316,20 @@ def build_extraction_prompt(
         for ds in document_sets
     )
 
+    # Reordered for optimal Claude processing:
+    # 1. Mission (what you're doing)
+    # 2. Response format (how to structure output) - EARLY so Claude can plan
+    # 3. Content focus (what to ignore) - PROMINENT placement
+    # 4. Extraction rules (evidence thresholds)
+    # 5. Output templates (examples)
+    # 6. Documents (the actual content)
     sections = [
         _build_mission_section(),
-        _build_output_spec_section(settings),
-        _build_extraction_rules_section(has_pairs),
-        _build_content_focus_section(),
-        _build_documents_section(client_name, document_sets),
         _build_response_format_section(document_sets),
+        _build_content_focus_section(),
+        _build_extraction_rules_section(has_pairs),
+        _build_output_spec_section(settings),
+        _build_documents_section(client_name, document_sets),
     ]
 
     return "\n\n".join(sections)
@@ -565,9 +596,52 @@ def extract_rules_and_guidelines_batch(
         debug_path.mkdir(parents=True, exist_ok=True)
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        file_path = debug_path / f"prompt_batch_{timestamp}.md"
+        tokens_k = prompt_tokens / 1000
+
+        # Save prompt with token count in filename
+        file_path = debug_path / f"prompt_batch_{timestamp}_{tokens_k:.1f}k.md"
         file_path.write_text(prompt, encoding="utf-8")
-        logger.info(f"Batch prompt saved to {file_path}")
+
+        # Analyze prompt sections
+        token_analysis = _analyze_prompt_tokens(prompt)
+
+        # Save metadata for batch
+        metadata = {
+            "timestamp": timestamp,
+            "client_name": client_name,
+            "is_batch": True,
+            "subtype_count": len(document_sets),
+            "subtypes": [ds.subtype for ds in document_sets],
+            "total_documents": sum(len(ds.documents) for ds in document_sets),
+            "by_subtype": [
+                {
+                    "subtype": ds.subtype,
+                    "document_count": len(ds.documents),
+                    "paired": len(ds.paired_documents),
+                    "unpaired": len(ds.unpaired_documents),
+                    "language_situation": ds.language_situation,
+                    "tokens": ds.total_tokens,
+                }
+                for ds in document_sets
+            ],
+            "tokens": {
+                "total": prompt_tokens,
+                "total_k": round(tokens_k, 1),
+                "by_section": token_analysis,
+            },
+            "document_tokens": sum(ds.total_tokens for ds in document_sets),
+            "model": settings.model,
+        }
+
+        metadata_path = debug_path / f"prompt_batch_{timestamp}_meta.json"
+        metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+
+        # Create batch-specific analysis
+        analysis_report = _format_batch_token_analysis(metadata)
+        analysis_path = debug_path / f"prompt_batch_{timestamp}_analysis.txt"
+        analysis_path.write_text(analysis_report, encoding="utf-8")
+
+        logger.info(f"Batch debug files saved: {file_path.name}, metadata, and analysis")
 
         # Return dummy results for each subtype
         results = {}
@@ -640,13 +714,15 @@ def _save_debug_prompt(
     settings: Settings,
     document_set: DocumentSet,
     prompt: str,
+    is_batch: bool = False,
 ) -> Path:
-    """Save prompt to debug folder instead of calling API.
+    """Save prompt to debug folder instead of calling API with analysis.
 
     Args:
         settings: Application settings.
         document_set: The source document set.
         prompt: The prompt to save.
+        is_batch: Whether this is a batch processing prompt.
 
     Returns:
         Path to the saved debug file.
@@ -655,12 +731,260 @@ def _save_debug_prompt(
     debug_path.mkdir(parents=True, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"prompt_{timestamp}.md"
+
+    # Calculate token count
+    prompt_tokens = count_tokens(prompt)
+    tokens_k = prompt_tokens / 1000
+
+    # Add token count to filename
+    filename = f"prompt_{timestamp}_{tokens_k:.1f}k.md"
     file_path = debug_path / filename
 
+    # Save prompt
     file_path.write_text(prompt, encoding="utf-8")
 
+    # Analyze prompt sections for token breakdown
+    token_analysis = _analyze_prompt_tokens(prompt)
+
+    # Save metadata file
+    metadata = {
+        "timestamp": timestamp,
+        "client_name": document_set.client_name,
+        "subtype": document_set.subtype,
+        "is_batch": is_batch,
+        "document_count": len(document_set.documents),
+        "paired_documents": len(document_set.paired_documents),
+        "unpaired_documents": len(document_set.unpaired_documents),
+        "language_situation": document_set.language_situation,
+        "tokens": {
+            "total": prompt_tokens,
+            "total_k": round(tokens_k, 1),
+            "by_section": token_analysis,
+        },
+        "document_tokens": document_set.total_tokens,
+        "model": settings.model,
+    }
+
+    metadata_path = debug_path / f"prompt_{timestamp}_meta.json"
+    metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+
+    # Save token analysis report
+    analysis_report = _format_token_analysis(metadata)
+    analysis_path = debug_path / f"prompt_{timestamp}_analysis.txt"
+    analysis_path.write_text(analysis_report, encoding="utf-8")
+
+    logger.info(f"Debug files saved: {file_path.name}, metadata, and analysis")
+
     return file_path
+
+
+def _analyze_prompt_tokens(prompt: str) -> dict[str, int]:
+    """Analyze a prompt and return token counts by section.
+
+    Args:
+        prompt: The full prompt text.
+
+    Returns:
+        Dictionary mapping section names to token counts.
+    """
+    sections = {}
+
+    # Split by section markers
+    section_markers = [
+        ("Mission & Context", "You are extracting localization rules"),
+        ("Response Format", "═.*RESPONSE FORMAT"),
+        ("Content Focus", "⚠️ FOCUS ON COPY ONLY"),
+        ("Extraction Rules", "═.*EXTRACTION RULES"),
+        ("Output Templates", "═.*OUTPUT TEMPLATES"),
+        ("Documents", "═.*EXTRACTION TASK"),
+    ]
+
+    for section_name, marker_pattern in section_markers:
+        # Try to find this section
+        matches = list(re.finditer(marker_pattern, prompt, re.IGNORECASE))
+        if matches:
+            start = matches[0].start()
+            # Find the next section or end of prompt
+            next_sections = [
+                m.start() for _, next_marker in section_markers[section_markers.index((section_name, marker_pattern)) + 1:]
+                for m in re.finditer(next_marker, prompt, re.IGNORECASE)
+            ]
+            end = next_sections[0] if next_sections else len(prompt)
+            section_text = prompt[start:end]
+            sections[section_name] = count_tokens(section_text)
+
+    return sections
+
+
+def _format_token_analysis(metadata: dict) -> str:
+    """Format token analysis into a readable report.
+
+    Args:
+        metadata: Metadata dictionary with token information.
+
+    Returns:
+        Formatted analysis report.
+    """
+    report = []
+    report.append("=" * 80)
+    report.append("PROMPT TOKEN ANALYSIS")
+    report.append("=" * 80)
+    report.append("")
+    report.append(f"Client: {metadata['client_name']}")
+    report.append(f"Subtype: {metadata['subtype']}")
+    report.append(f"Timestamp: {metadata['timestamp']}")
+    report.append(f"Batch Processing: {metadata['is_batch']}")
+    report.append("")
+    report.append("-" * 80)
+    report.append("OVERVIEW")
+    report.append("-" * 80)
+    report.append(f"Total Documents: {metadata['document_count']}")
+    report.append(f"  - Paired: {metadata['paired_documents']}")
+    report.append(f"  - Unpaired: {metadata['unpaired_documents']}")
+    report.append(f"Language Situation: {metadata['language_situation']}")
+    report.append("")
+    report.append(f"Document Content: {metadata['document_tokens']:,} tokens")
+    report.append(f"Total Prompt: {metadata['tokens']['total']:,} tokens ({metadata['tokens']['total_k']}k)")
+    report.append("")
+
+    # Calculate overhead
+    overhead = metadata['tokens']['total'] - metadata['document_tokens']
+    overhead_pct = (overhead / metadata['tokens']['total']) * 100 if metadata['tokens']['total'] > 0 else 0
+    report.append(f"Prompt Overhead: {overhead:,} tokens ({overhead_pct:.1f}%)")
+    report.append("")
+
+    # Section breakdown
+    report.append("-" * 80)
+    report.append("TOKEN BREAKDOWN BY SECTION")
+    report.append("-" * 80)
+
+    by_section = metadata['tokens']['by_section']
+    if by_section:
+        # Sort by token count descending
+        sorted_sections = sorted(by_section.items(), key=lambda x: x[1], reverse=True)
+
+        for section_name, token_count in sorted_sections:
+            pct = (token_count / metadata['tokens']['total']) * 100
+            bar_length = int(pct / 2)  # Scale to 50 chars max
+            bar = "█" * bar_length
+            report.append(f"{section_name:20} {token_count:6,} tokens  {pct:5.1f}%  {bar}")
+    else:
+        report.append("(Section analysis not available)")
+
+    report.append("")
+    report.append("-" * 80)
+    report.append("COST ESTIMATE (Opus 4.5)")
+    report.append("-" * 80)
+
+    # Calculate costs
+    input_cost = (metadata['tokens']['total'] / 1_000_000) * 5  # $5 per 1M tokens
+    estimated_output = metadata['tokens']['total'] * 0.3  # Rough estimate
+    output_cost = (estimated_output / 1_000_000) * 25  # $25 per 1M tokens
+    total_cost = input_cost + output_cost
+
+    report.append(f"Input: {metadata['tokens']['total']:,} tokens × $5/1M = ${input_cost:.4f}")
+    report.append(f"Output (est): {estimated_output:,.0f} tokens × $25/1M = ${output_cost:.4f}")
+    report.append(f"Total Estimated Cost: ${total_cost:.4f}")
+    report.append("")
+    report.append("=" * 80)
+
+    return "\n".join(report)
+
+
+def _format_batch_token_analysis(metadata: dict) -> str:
+    """Format batch token analysis into a readable report.
+
+    Args:
+        metadata: Metadata dictionary with token information for batch processing.
+
+    Returns:
+        Formatted analysis report.
+    """
+    report = []
+    report.append("=" * 80)
+    report.append("BATCH PROMPT TOKEN ANALYSIS")
+    report.append("=" * 80)
+    report.append("")
+    report.append(f"Client: {metadata['client_name']}")
+    report.append(f"Timestamp: {metadata['timestamp']}")
+    report.append(f"Batch Processing: {metadata['subtype_count']} subtypes")
+    report.append("")
+    report.append("-" * 80)
+    report.append("OVERVIEW")
+    report.append("-" * 80)
+    report.append(f"Subtypes: {', '.join(metadata['subtypes'])}")
+    report.append(f"Total Documents: {metadata['total_documents']}")
+    report.append("")
+
+    # Per-subtype breakdown
+    report.append("By Subtype:")
+    for st_info in metadata['by_subtype']:
+        report.append(f"  - {st_info['subtype']:20} {st_info['document_count']:2} docs  "
+                     f"{st_info['tokens']:6,} tokens  ({st_info['language_situation']})")
+    report.append("")
+
+    report.append(f"Document Content: {metadata['document_tokens']:,} tokens")
+    report.append(f"Total Prompt: {metadata['tokens']['total']:,} tokens ({metadata['tokens']['total_k']}k)")
+    report.append("")
+
+    # Calculate overhead
+    overhead = metadata['tokens']['total'] - metadata['document_tokens']
+    overhead_pct = (overhead / metadata['tokens']['total']) * 100 if metadata['tokens']['total'] > 0 else 0
+    report.append(f"Prompt Overhead: {overhead:,} tokens ({overhead_pct:.1f}%)")
+    report.append("")
+
+    # Section breakdown
+    report.append("-" * 80)
+    report.append("TOKEN BREAKDOWN BY SECTION")
+    report.append("-" * 80)
+
+    by_section = metadata['tokens']['by_section']
+    if by_section:
+        sorted_sections = sorted(by_section.items(), key=lambda x: x[1], reverse=True)
+
+        for section_name, token_count in sorted_sections:
+            pct = (token_count / metadata['tokens']['total']) * 100
+            bar_length = int(pct / 2)
+            bar = "█" * bar_length
+            report.append(f"{section_name:20} {token_count:6,} tokens  {pct:5.1f}%  {bar}")
+    else:
+        report.append("(Section analysis not available)")
+
+    report.append("")
+    report.append("-" * 80)
+    report.append("COST ESTIMATE (Opus 4.5)")
+    report.append("-" * 80)
+
+    input_cost = (metadata['tokens']['total'] / 1_000_000) * 5
+    estimated_output = metadata['tokens']['total'] * 0.3
+    output_cost = (estimated_output / 1_000_000) * 25
+    total_cost = input_cost + output_cost
+
+    report.append(f"Input: {metadata['tokens']['total']:,} tokens × $5/1M = ${input_cost:.4f}")
+    report.append(f"Output (est): {estimated_output:,.0f} tokens × $25/1M = ${output_cost:.4f}")
+    report.append(f"Total Estimated Cost: ${total_cost:.4f}")
+    report.append(f"Cost per Subtype: ${total_cost / metadata['subtype_count']:.4f}")
+    report.append("")
+
+    report.append("-" * 80)
+    report.append("BATCH EFFICIENCY")
+    report.append("-" * 80)
+
+    # Estimate what individual processing would cost
+    individual_overhead_per_subtype = 3000  # Approximate per-subtype overhead
+    individual_total = metadata['document_tokens'] + (individual_overhead_per_subtype * metadata['subtype_count'])
+    individual_cost = (individual_total / 1_000_000) * 5 + (individual_total * 0.3 / 1_000_000) * 25
+
+    savings = individual_cost - total_cost
+    savings_pct = (savings / individual_cost) * 100 if individual_cost > 0 else 0
+
+    report.append(f"Batch mode cost: ${total_cost:.4f}")
+    report.append(f"Individual mode cost (estimated): ${individual_cost:.4f}")
+    report.append(f"Savings: ${savings:.4f} ({savings_pct:.1f}%)")
+    report.append("")
+    report.append("=" * 80)
+
+    return "\n".join(report)
 
 
 def save_results(
