@@ -362,8 +362,10 @@ def _parse_response(response_text: str) -> tuple[str, str]:
         client_rules = client_rules_match.group(1).strip()
 
     # Extract GUIDELINES section (everything after ### GUIDELINES or ## GUIDELINES)
+    # Stop only at ## SUBTYPE: (batch mode) or end of string
+    # Do NOT stop at content headers like "## 1. Purpose" which are part of the guidelines
     guidelines_match = re.search(
-        r"###? GUIDELINES\s*(.*?)(?=\n##[# ]|$)",
+        r"###? GUIDELINES\s*(.*?)(?=\n## SUBTYPE:|$)",
         response_text,
         re.DOTALL | re.IGNORECASE,
     )
@@ -374,7 +376,13 @@ def _parse_response(response_text: str) -> tuple[str, str]:
         if "GUIDELINES" in response_text.upper():
             parts = re.split(r"###? GUIDELINES", response_text, flags=re.IGNORECASE)
             if len(parts) > 1:
-                guidelines = parts[1].strip()
+                # Take everything but stop at ## SUBTYPE: if present
+                content = parts[1]
+                subtype_match = re.search(r"\n## SUBTYPE:", content, re.IGNORECASE)
+                if subtype_match:
+                    guidelines = content[:subtype_match.start()].strip()
+                else:
+                    guidelines = content.strip()
 
     return client_rules, guidelines
 
@@ -417,9 +425,12 @@ def _parse_batch_response(
             client_rules = rules_match.group(1).strip()
 
         # Extract GUIDELINES
+        # In batch mode, subtype_content already stops at next subtype
+        # So we just need to take everything after ### GUIDELINES
+        # Do NOT stop at content headers like "## 1. Purpose"
         guidelines = ""
         guidelines_match = re.search(
-            r"### GUIDELINES\s*(.*?)(?=\n### [A-Z]|\n## SUBTYPE:|$)",
+            r"### GUIDELINES\s*(.*?)$",
             subtype_content,
             re.DOTALL | re.IGNORECASE,
         )
