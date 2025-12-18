@@ -26,8 +26,8 @@ from .extractor import (
     save_results,
     scan_client_folder,
 )
-from .models import DocumentSet
 from .logging_config import get_logger, setup_logging
+from .models import DocumentSet
 
 console = Console()
 logger = get_logger(__name__)

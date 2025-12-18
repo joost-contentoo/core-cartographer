@@ -33,7 +33,7 @@ def detect_language(text: str, sample_size: int = 1000) -> str:
 
     try:
         sample = text[:sample_size]
-        lang_code = detect(sample)
+        lang_code: str = detect(sample)
         return lang_code.upper()
     except LangDetectException:
         return "UNKNOWN"

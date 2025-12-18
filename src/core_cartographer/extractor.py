@@ -8,6 +8,7 @@ import json
 import re
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import anthropic
 
@@ -664,8 +665,15 @@ def extract_rules_and_guidelines(
             original_error=e,
         )
 
-    # Parse response
-    response_text = response.content[0].text
+    # Parse response - extract text from the first TextBlock
+    first_block = response.content[0]
+    if hasattr(first_block, "text"):
+        response_text = first_block.text
+    else:
+        raise ExtractionError(
+            f"Unexpected response block type: {type(first_block)}",
+            subtype=document_set.subtype,
+        )
 
     try:
         client_rules, guidelines = _parse_response(response_text)
@@ -838,8 +846,15 @@ def extract_rules_and_guidelines_batch(
             original_error=e,
         )
 
-    # Parse response for each subtype
-    response_text = response.content[0].text
+    # Parse response for each subtype - extract text from the first TextBlock
+    first_block = response.content[0]
+    if hasattr(first_block, "text"):
+        response_text = first_block.text
+    else:
+        raise ExtractionError(
+            f"Unexpected response block type: {type(first_block)}",
+            subtype="batch",
+        )
 
     try:
         results = _parse_batch_response(response_text, document_sets)
@@ -978,7 +993,7 @@ def _analyze_prompt_tokens(prompt: str) -> dict[str, int]:
         if matches:
             start = matches[0].start()
             # Find the next section or end of prompt
-            next_sections = [
+            next_sections: list[int] = [
                 m.start() for _, next_marker in section_markers[section_markers.index((section_name, marker_pattern)) + 1:]
                 for m in re.finditer(next_marker, prompt, re.IGNORECASE)
             ]
@@ -989,7 +1004,7 @@ def _analyze_prompt_tokens(prompt: str) -> dict[str, int]:
     return sections
 
 
-def _format_token_analysis(metadata: dict) -> str:
+def _format_token_analysis(metadata: dict[str, Any]) -> str:
     """Format token analysis into a readable report.
 
     Args:
@@ -1064,7 +1079,7 @@ def _format_token_analysis(metadata: dict) -> str:
     return "\n".join(report)
 
 
-def _format_batch_token_analysis(metadata: dict) -> str:
+def _format_batch_token_analysis(metadata: dict[str, Any]) -> str:
     """Format batch token analysis into a readable report.
 
     Args:

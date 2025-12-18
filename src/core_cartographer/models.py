@@ -77,7 +77,7 @@ class DocumentSet:
         pairs: dict[str, dict[str, Document]] = {}
 
         for doc in self.documents:
-            if not doc.is_paired:
+            if not doc.is_paired or doc.pair_id is None:
                 continue
 
             if doc.pair_id not in pairs:

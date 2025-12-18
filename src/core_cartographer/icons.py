@@ -21,6 +21,7 @@ ICON_SETTINGS = """
 </svg>
 """
 
-def get_base64_logo():
+def get_base64_logo() -> str:
+    """Return base64-encoded logo (placeholder)."""
     # Placeholder for a potential logo logic
     return ""

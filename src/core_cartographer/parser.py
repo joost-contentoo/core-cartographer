@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from docx import Document
+from docx import Document as DocxDocument
 from pypdf import PdfReader
 
 from .exceptions import DocumentParsingError, UnsupportedFormatError
@@ -75,7 +75,7 @@ def _parse_text_file(file_path: Path) -> str:
 
 def _parse_docx(file_path: Path) -> str:
     """Parse a Word document and extract text."""
-    doc = Document(file_path)
+    doc = DocxDocument(str(file_path))
     paragraphs = [paragraph.text for paragraph in doc.paragraphs]
     content = "\n\n".join(paragraphs)
     logger.debug(f"Parsed DOCX: {file_path} ({len(paragraphs)} paragraphs)")
@@ -111,7 +111,7 @@ def get_supported_files(directory: Path) -> list[Path]:
         logger.warning(f"Directory does not exist: {directory}")
         return []
 
-    files = []
+    files: list[Path] = []
     for ext in SUPPORTED_EXTENSIONS:
         files.extend(directory.glob(f"*{ext}"))
 
