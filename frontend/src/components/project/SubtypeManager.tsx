@@ -24,6 +24,7 @@ interface SubtypeManagerProps {
   onAddSubtype: (subtype: string) => void;
   onRemoveSubtype: (subtype: string) => void;
   disabled?: boolean;
+  compact?: boolean;
 }
 
 export function SubtypeManager({
@@ -31,21 +32,28 @@ export function SubtypeManager({
   onAddSubtype,
   onRemoveSubtype,
   disabled = false,
+  compact = false,
 }: SubtypeManagerProps) {
   const [newSubtype, setNewSubtype] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [showAddInput, setShowAddInput] = useState(false);
 
   const handleAdd = () => {
     const trimmed = newSubtype.trim().toLowerCase();
     if (trimmed && !subtypes.includes(trimmed)) {
       onAddSubtype(trimmed);
       setNewSubtype("");
+      setShowAddInput(false);
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       handleAdd();
+    }
+    if (e.key === "Escape") {
+      setShowAddInput(false);
+      setNewSubtype("");
     }
   };
 
@@ -61,6 +69,92 @@ export function SubtypeManager({
     return subtype !== "general";
   };
 
+  // Compact mode: inline badges with small add button
+  if (compact) {
+    return (
+      <>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-muted-foreground mr-1">Categories:</span>
+          {subtypes.map((st) => (
+            <Badge
+              key={st}
+              variant="secondary"
+              className="text-xs px-2 py-0.5 flex items-center gap-1"
+            >
+              {st}
+              {canDeleteSubtype(st) && !disabled && (
+                <button
+                  onClick={() => setDeleteTarget(st)}
+                  className="hover:bg-muted rounded-full p-0.5 transition-colors"
+                  aria-label={`Remove ${st}`}
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              )}
+            </Badge>
+          ))}
+          {showAddInput ? (
+            <div className="flex items-center gap-1">
+              <Input
+                value={newSubtype}
+                onChange={(e) => setNewSubtype(e.target.value)}
+                onKeyDown={handleKeyPress}
+                placeholder="Category name"
+                disabled={disabled}
+                className="h-6 w-[120px] text-xs"
+                autoFocus
+              />
+              <Button
+                onClick={handleAdd}
+                disabled={disabled || !newSubtype.trim()}
+                size="sm"
+                className="h-6 px-2 text-xs"
+              >
+                Add
+              </Button>
+            </div>
+          ) : (
+            <Button
+              onClick={() => setShowAddInput(true)}
+              disabled={disabled}
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs"
+            >
+              <Plus className="w-3 h-3 mr-1" />
+              Add
+            </Button>
+          )}
+        </div>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-destructive" />
+                Remove Category?
+              </DialogTitle>
+              <DialogDescription>
+                Are you sure you want to remove the <strong>{deleteTarget}</strong> category?
+                Files in this category will be moved to <strong>general</strong>.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDelete}>
+                Remove
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
+
+  // Full mode: Card with description
   return (
     <>
       <Card>

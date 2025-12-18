@@ -380,143 +380,104 @@ export default function WorkspacePage() {
           </Card>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* LEFT COLUMN: Command Center (Inputs & Controls) - Spans 5 columns */}
-          <div className="lg:col-span-5 space-y-6">
-
-            {/* 1. Project Context & Actions (Combined for flow) */}
-            <Card className="border-none shadow-md">
-              <CardHeader className="pb-4 bg-muted/30">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xl">Project Setup</CardTitle>
-                  <CostDisplay
-                    totalTokens={totalTokens()}
-                    estimatedCost={estimatedCost()}
-                    minimal={true}
-                  />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6 pt-6">
-                {/* Client Name Input */}
-                <div className="space-y-2">
-                  <Label htmlFor="client-name">Client Name</Label>
-                  <Input
-                    id="client-name"
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
-                    placeholder="e.g., Acme Corporation"
-                    className="text-lg py-5"
-                  />
-                </div>
-
-                {/* Primary Actions */}
-                <div className="grid grid-cols-2 gap-3">
-                  <Button
-                    onClick={handleAutoDetect}
-                    disabled={files.length === 0}
-                    variant="secondary"
-                    className="w-full justify-center h-11"
-                  >
-                    <Search className="w-4 h-4 mr-2" />
-                    Auto-Detect
-                  </Button>
-                  <Button
-                    onClick={handleExtraction}
-                    disabled={!clientName || files.length === 0 || extracting}
-                    className="w-full justify-center h-11 shadow-primary/25"
-                  >
-                    {extracting ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Sparkles className="w-4 h-4 mr-2" />
-                    )}
-                    {extracting ? "Extracting..." : "Start Extraction"}
-                  </Button>
-                </div>
-
-                {/* Settings Collapsible (Simplification) */}
-                <div className="pt-2 border-t">
-                  <SettingsPanel settings={settings} onUpdate={updateSettings} />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* 2. Documents Section */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between px-1">
-                <h2 className="text-lg font-semibold tracking-tight">Documents & Rules</h2>
-              </div>
-
-              <FileUploadZone
-                onFilesSelected={handleFileUpload}
-                uploading={uploading}
-                disabled={uploading}
-              />
-
-              <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-                <FileList
-                  files={files}
-                  subtypes={subtypes}
-                  selectedFileId={selectedFileId}
-                  onSelectFile={setSelectedFile}
-                  onUpdateFile={updateFile}
-                  onDeleteFile={handleDeleteFile}
-                  compact={true}
+        {/* Top Bar: Project Setup & Actions */}
+        <Card className="border-none shadow-md">
+          <CardContent className="py-4">
+            <div className="flex flex-wrap items-center gap-4 md:gap-6">
+              {/* Client Name Input */}
+              <div className="flex items-center gap-2 flex-1 min-w-[200px] max-w-[300px]">
+                <Label htmlFor="client-name" className="text-sm whitespace-nowrap">Client</Label>
+                <Input
+                  id="client-name"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  placeholder="e.g., Acme Corporation"
+                  className="h-9"
                 />
               </div>
 
-              {/* Configuration / Subtypes */}
-              <Card className="bg-muted/30 border-dashed">
-                <CardContent className="pt-6">
+              {/* Cost Display */}
+              <CostDisplay
+                totalTokens={totalTokens()}
+                estimatedCost={estimatedCost()}
+                minimal={true}
+              />
+
+              {/* Spacer */}
+              <div className="flex-1" />
+
+              {/* Primary Actions */}
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={handleAutoDetect}
+                  disabled={files.length === 0}
+                  variant="secondary"
+                  size="sm"
+                  className="h-9"
+                >
+                  <Search className="w-4 h-4 mr-2" />
+                  Auto-Detect
+                </Button>
+                <Button
+                  onClick={handleExtraction}
+                  disabled={!clientName || files.length === 0 || extracting}
+                  size="sm"
+                  className="h-9"
+                >
+                  {extracting ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-4 h-4 mr-2" />
+                  )}
+                  {extracting ? "Extracting..." : "Start Extraction"}
+                </Button>
+                <SettingsPanel settings={settings} onUpdate={updateSettings} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Main Content: Document Table (Central) + Preview (Side) */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+
+          {/* MAIN: Document Table - Takes most space */}
+          <div className="xl:col-span-8 space-y-4">
+            {/* Upload Zone */}
+            <FileUploadZone
+              onFilesSelected={handleFileUpload}
+              uploading={uploading}
+              disabled={uploading}
+            />
+
+            {/* Document Table - THE CORE */}
+            <Card className="border shadow-sm overflow-hidden">
+              <CardHeader className="py-3 px-4 bg-muted/30 border-b">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base font-semibold">
+                    Documents
+                  </CardTitle>
                   <SubtypeManager
                     subtypes={subtypes}
                     onAddSubtype={addSubtype}
                     onRemoveSubtype={removeSubtype}
                     disabled={extracting}
+                    compact={true}
                   />
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+                </div>
+              </CardHeader>
+              <FileList
+                files={files}
+                subtypes={subtypes}
+                selectedFileId={selectedFileId}
+                onSelectFile={setSelectedFile}
+                onUpdateFile={updateFile}
+                onDeleteFile={handleDeleteFile}
+              />
+            </Card>
 
-          {/* RIGHT COLUMN: Viewer (Preview & Results) - Spans 7 columns */}
-          <div className="lg:col-span-7 space-y-6 lg:sticky lg:top-8 h-fit">
-
-            {/* Main Viewer Card */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between px-1">
-                <h2 className="text-lg font-semibold tracking-tight">
-                  {selectedFile ? `Preview: ${selectedFile.filename}` : "Workspace Viewer"}
-                </h2>
-                {results && (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    Results Ready
-                  </span>
-                )}
-              </div>
-
-              {/* Large Preview Area */}
-              <div className="min-h-[600px] h-[calc(100vh-12rem)] rounded-xl border bg-background shadow-sm overflow-hidden relative group">
-                {/* Results Overlay Alert */}
-                {results && !showResults && (
-                  <div className="absolute top-4 right-4 z-10 w-auto">
-                    <Button
-                      onClick={() => setShowResults(true)}
-                      className="shadow-lg animate-in slide-in-from-top-2"
-                    >
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      View Extraction Results
-                    </Button>
-                  </div>
-                )}
-
-                <FilePreview file={selectedFile} className="h-full w-full" />
-              </div>
-            </div>
-
-            {/* Success State (if results are ready but dialog closed) */}
+            {/* Results Banner (when available) */}
             {results && (
-              <Card className="border-primary/20 bg-primary/5 animate-in slide-in-from-bottom-4 duration-500">
+              <Card className="border-primary/20 bg-primary/5">
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
@@ -525,17 +486,30 @@ export default function WorkspacePage() {
                     <div>
                       <div className="font-medium text-foreground">Extraction Complete</div>
                       <div className="text-sm text-muted-foreground">
-                        {Object.keys(results).length} categories processed successfully
+                        {Object.keys(results).length} categories processed
                       </div>
                     </div>
                   </div>
                   <Button onClick={() => setShowResults(true)}>
-                    Open Report
+                    View Results
                   </Button>
                 </CardContent>
               </Card>
             )}
+          </div>
 
+          {/* SIDE: Preview Panel */}
+          <div className="xl:col-span-4 xl:sticky xl:top-8 h-fit">
+            <Card className="overflow-hidden">
+              <CardHeader className="py-3 px-4 bg-muted/30 border-b">
+                <CardTitle className="text-base font-semibold truncate">
+                  {selectedFile ? selectedFile.filename : "Preview"}
+                </CardTitle>
+              </CardHeader>
+              <div className="h-[500px] xl:h-[calc(100vh-16rem)]">
+                <FilePreview file={selectedFile} className="h-full w-full" />
+              </div>
+            </Card>
           </div>
         </div>
       </div>
