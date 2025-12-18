@@ -10,9 +10,11 @@
 1. **Create environment file:**
    ```bash
    cp .env.example .env
+   # Note: The .env.example is at the project root
+   # The .env file will also be created at the project root
    ```
 
-2. **Add your API key to `.env`:**
+2. **Add your API key to `.env` (in the project root):**
    ```
    ANTHROPIC_API_KEY=your_actual_api_key_here
    ```

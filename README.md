@@ -90,9 +90,10 @@ source .venv/bin/activate  # Windows: .venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Configure environment
-cp .env.example .env
-# Edit .env and add your ANTHROPIC_API_KEY
+# Configure environment (use root .env file)
+# Note: The .env file should be at the project root, not in backend/
+# The backend automatically reads from ../.env
+# If you prefer backend/.env, copy: cp .env.example .env
 ```
 
 #### 3. Setup Frontend
@@ -105,8 +106,8 @@ cd ../frontend
 npm install
 # or: yarn install
 
-# Configure environment (optional)
-cp .env.example .env.local
+# Configure environment (optional - only needed if API is not at localhost:8000)
+# Create .env.local with: NEXT_PUBLIC_API_URL=http://your-backend-url:8000
 ```
 
 ### Running the Application
@@ -136,11 +137,19 @@ cd frontend
 npm run dev
 ```
 
-#### Option 3: Docker Compose (Coming Soon)
+#### Option 3: Docker Compose
 
+**Development:**
 ```bash
 docker-compose up
 ```
+
+**Production:**
+```bash
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed Docker deployment instructions.
 
 ---
 
@@ -323,23 +332,22 @@ core-cartographer/
 │   └── next.config.js
 │
 ├── templates/                  # Example outputs for AI
-│   ├── client_rules_example.js
-│   └── guidelines_example.md
+│   ├── client_rules_example_condensed.js
+│   └── guidelines_example_condensed.md
 ├── instructions/               # Extraction instructions
-│   └── extraction_instructions.md
-│
-├── docs/                       # Documentation
-│   ├── MIGRATION_PLAN_DETAILED.md
-│   ├── USER_GUIDE.md
-│   ├── TEST_MATRIX.md
-│   ├── WEEK_4_COMPLETE.md
-│   └── WEEK_5_COMPLETE.md
+│   ├── extraction_instructions.md
+│   └── archive/
+│       └── extraction_instructions_v1.md
 │
 ├── .env.example
-├── docker-compose.yml
+├── docker-compose.yml           # Development Docker setup
+├── docker-compose.prod.yml      # Production Docker setup
 ├── start-backend.sh
 ├── start-frontend.sh
-└── README.md
+├── README.md
+├── QUICKSTART.md
+├── USER_GUIDE.md
+└── DEPLOYMENT.md
 ```
 
 ---
@@ -349,19 +357,23 @@ core-cartographer/
 ### Backend Environment Variables
 
 ```bash
-# .env in backend/
+# .env in project root (or backend/.env)
 ANTHROPIC_API_KEY=sk-ant-...    # Required
-MODEL=claude-opus-4-5-20251101  # Optional
-DEBUG_MODE=false                 # Optional
-CACHE_EXPIRY_HOURS=1            # Optional
+MODEL=claude-opus-4-5-20251101  # Optional (default)
+DEBUG_MODE=false                 # Optional (default)
+CACHE_EXPIRY_HOURS=1            # Optional (default)
 ```
+
+**Note:** The backend can read `.env` from either the project root or `backend/.env`. The project root is recommended for simpler configuration.
 
 ### Frontend Environment Variables
 
 ```bash
-# .env.local in frontend/
-NEXT_PUBLIC_API_URL=http://localhost:8000  # Optional (default)
+# .env.local in frontend/ (optional)
+NEXT_PUBLIC_API_URL=http://localhost:8000  # Default value, only set if different
 ```
+
+**Note:** The frontend defaults to `http://localhost:8000` for the backend API. Only create `.env.local` if you need a different URL.
 
 ---
 
@@ -423,14 +435,7 @@ npm run build
 
 ## Testing
 
-### Manual Testing
-
-A comprehensive test matrix is available in `TEST_MATRIX.md`:
-- 45 test cases covering all functionality
-- Organized by feature area
-- Includes expected results and notes
-
-### Automated Testing (Coming Soon)
+### Automated Testing
 
 ```bash
 # Backend
@@ -462,21 +467,22 @@ npm run build
 npm start
 ```
 
-### Docker Deployment (Coming Soon)
+### Docker Deployment
 
 ```bash
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
+For complete deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md).
+
 ---
 
 ## Documentation
 
+- **[Quick Start Guide](QUICKSTART.md)** - Get up and running quickly
 - **[User Guide](USER_GUIDE.md)** - Complete user documentation
-- **[Test Matrix](TEST_MATRIX.md)** - Manual testing checklist
-- **[Migration Plan](MIGRATION_PLAN_DETAILED.md)** - Technical migration details
-- **[Week 4 Complete](WEEK_4_COMPLETE.md)** - Extraction flow implementation
-- **[Week 5 Complete](WEEK_5_COMPLETE.md)** - Polish & error handling
+- **[Deployment Guide](DEPLOYMENT.md)** - Production deployment instructions
+- **[API Documentation](http://localhost:8000/docs)** - Interactive API documentation (when backend is running)
 
 ---
 
@@ -551,11 +557,11 @@ Contributions welcome! Please:
 - ✅ Keyboard shortcuts & animations
 
 ### v2.2 (Next)
-- [ ] Automated testing suite
-- [ ] Docker production deployment
+- [ ] Expanded automated testing suite
 - [ ] Result persistence (optional)
 - [ ] User authentication (optional)
 - [ ] API rate limiting
+- [ ] Enhanced error recovery
 
 ### v3.0 (Future)
 - [ ] Multi-project support
