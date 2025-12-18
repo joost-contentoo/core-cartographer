@@ -22,11 +22,14 @@ COPY templates/ ./templates/
 COPY instructions/ ./instructions/
 
 # Create cache directory
-RUN mkdir -p /tmp/cartographer_cache
+RUN mkdir -p /app/temp_cache
+
+# Set cache directory environment variable
+ENV CACHE_DIR=/app/temp_cache
 
 # Create non-root user
 RUN useradd -m -u 1000 cartographer && \
-    chown -R cartographer:cartographer /app /tmp/cartographer_cache
+    chown -R cartographer:cartographer /app
 
 # Switch to non-root user
 USER cartographer

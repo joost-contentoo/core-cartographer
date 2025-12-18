@@ -27,18 +27,20 @@ async def extract_with_streaming(request: ExtractionRequest):
     """
     Extract rules and guidelines with SSE progress streaming.
 
-    Event types:
-    - started: Extraction begun
-    - progress: Per-subtype progress update
-    - subtype_complete: One subtype finished
-    - complete: All done, includes results
-    - error: Something went wrong
+    This endpoint returns a Server-Sent Events stream with the following event types:
+
+    - `started`: Extraction begun. Fields: `subtypes` (list of subtypes to process)
+    - `progress`: Processing update. Fields: `subtype`, `current`, `total`
+    - `subtype_complete`: One subtype finished. Fields: `subtype`, `current`, `total`
+    - `subtype_error`: One subtype failed. Fields: `subtype`, `message`
+    - `complete`: All done. Fields: `results`, `total_input_tokens`, `total_output_tokens`, `total_cost`
+    - `error`: Fatal error. Fields: `message`
 
     Args:
         request: Extraction configuration with document sets
 
     Returns:
-        StreamingResponse with Server-Sent Events
+        StreamingResponse with Server-Sent Events (text/event-stream)
     """
     async def event_stream():
         try:
@@ -127,10 +129,16 @@ async def extract_with_streaming(request: ExtractionRequest):
                     error = handle_anthropic_error(e)
                     error_msg = f"Failed to extract {doc_set.subtype}: {error.detail}"
                     logger.error(error_msg)
-                    yield f"data: {json.dumps({'type': 'error', 'message': error_msg, 'subtype': doc_set.subtype})}\n\n"
-                    return
+                    # Send error for this subtype but continue processing others
+                    yield f"data: {json.dumps({'type': 'subtype_error', 'message': error_msg, 'subtype': doc_set.subtype})}\n\n"
+                    # Continue to next subtype instead of returning
+                    continue
 
-            # Calculate totals
+            # Calculate totals (only from successful results)
+            if not results:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'All extractions failed'})}\n\n"
+                return
+
             total_input = sum(r["input_tokens"] for r in results.values())
             total_output = sum(r["output_tokens"] for r in results.values())
             total_cost = estimate_cost(total_input, total_output, settings.model)

@@ -2,7 +2,7 @@
 
 import tiktoken
 
-# Pricing per 1M tokens (as of Dec 2024)
+# Pricing per 1M tokens (as of Dec 2025)
 # Using Claude Opus 4.5 pricing
 PRICING = {
     "claude-opus-4-5-20251101": {

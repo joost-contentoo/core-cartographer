@@ -1,7 +1,7 @@
 # Core Cartographer - Deployment Guide
 
 **Version:** 2.0
-**Last Updated:** December 18, 2024
+**Last Updated:** December 18, 2025
 
 ---
 

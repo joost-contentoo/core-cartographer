@@ -1,7 +1,7 @@
 # Core Cartographer - Manual Test Matrix
 
 **Version:** 1.0
-**Date:** December 18, 2024
+**Date:** December 18, 2025
 **Testing Target:** Next.js + FastAPI Migration
 
 ---
@@ -443,7 +443,7 @@ Prepare the following test files:
 
 | Step | Action | Expected Result | Status | Notes |
 |------|--------|----------------|--------|-------|
-| 1 | Upload file with special chars (e.g., `test#file@2024.pdf`) | Uploads successfully | ⏳ | |
+| 1 | Upload file with special chars (e.g., `test#file@2025.pdf`) | Uploads successfully | ⏳ | |
 | 2 | Verify display | Filename shows correctly | ⏳ | |
 | 3 | Download results | Filename handled correctly | ⏳ | |
 

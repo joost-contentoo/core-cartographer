@@ -1,7 +1,7 @@
 # Core Cartographer - User Guide
 
 **Version:** 2.0 (Next.js + FastAPI)
-**Last Updated:** December 18, 2024
+**Last Updated:** December 18, 2025
 
 ---
 
