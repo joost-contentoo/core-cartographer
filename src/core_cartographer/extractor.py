@@ -211,7 +211,7 @@ EXTRACTION TASK
 ══════════════════════════════════════════════════════════════════════════════
 
 Client: {client_name}
-Subtypes: {', '.join(subtype_names)}
+Subtypes: {", ".join(subtype_names)}
 Total Documents: {total_docs}"""
 
     sections = [header]
@@ -356,7 +356,7 @@ RESPONSE FORMAT - Separate output for EACH subtype:
 [Complete guidelines.md - CONDENSED FORMAT, NO code fence]
 {guidelines_structure}
 
-(Repeat for each subtype: {', '.join(subtype_names)})
+(Repeat for each subtype: {", ".join(subtype_names)})
 
 IMPORTANT: Generate COMPLETE, STANDALONE outputs for each subtype. Don't cross-reference between subtypes in the output."""
 
@@ -377,10 +377,7 @@ def build_extraction_prompt(
         Complete prompt string for Claude.
     """
     # Determine if we have any paired documents
-    has_pairs = any(
-        len(ds.paired_documents) > 0
-        for ds in document_sets
-    )
+    has_pairs = any(len(ds.paired_documents) > 0 for ds in document_sets)
 
     # Reordered for optimal Claude processing:
     # 1. Mission (what you're doing)
@@ -461,8 +458,7 @@ def _validate_guidelines(guidelines: str, subtype: str = "unknown") -> str:
     # Check for horizontal rules
     if re.search(r"^---+$", guidelines, re.MULTILINE):
         logger.warning(
-            f"[{subtype}] Guidelines contain horizontal rules (---). "
-            f"These should be removed."
+            f"[{subtype}] Guidelines contain horizontal rules (---). These should be removed."
         )
 
     # Check for numbered section headers (old format)
@@ -515,7 +511,7 @@ def _parse_response(response_text: str) -> tuple[str, str]:
                 content = parts[1]
                 subtype_match = re.search(r"\n## SUBTYPE:", content, re.IGNORECASE)
                 if subtype_match:
-                    guidelines = content[:subtype_match.start()].strip()
+                    guidelines = content[: subtype_match.start()].strip()
                 else:
                     guidelines = content.strip()
 
@@ -619,9 +615,7 @@ def extract_rules_and_guidelines(
         ExtractionError: If the Claude API call fails.
         ResponseParsingError: If the response cannot be parsed.
     """
-    logger.info(
-        f"Starting extraction for {document_set.client_name}/{document_set.subtype}"
-    )
+    logger.info(f"Starting extraction for {document_set.client_name}/{document_set.subtype}")
 
     # Build the prompt
     prompt = build_extraction_prompt(
@@ -699,12 +693,11 @@ def extract_rules_and_guidelines(
     actual_output = response.usage.output_tokens
 
     logger.info(
-        f"Extraction complete: {len(client_rules)} chars rules, "
-        f"{len(guidelines)} chars guidelines"
+        f"Extraction complete: {len(client_rules)} chars rules, {len(guidelines)} chars guidelines"
     )
     logger.info(
         f"Token tracking - Estimated input: {estimated_input}, "
-        f"Actual input: {actual_input} ({actual_input/estimated_input*100:.1f}%), "
+        f"Actual input: {actual_input} ({actual_input / estimated_input * 100:.1f}%), "
         f"Actual output: {actual_output}"
     )
 
@@ -740,9 +733,7 @@ def extract_rules_and_guidelines_batch(
         return {}
 
     client_name = document_sets[0].client_name
-    logger.info(
-        f"Starting batch extraction for {client_name} with {len(document_sets)} subtypes"
-    )
+    logger.info(f"Starting batch extraction for {client_name} with {len(document_sets)} subtypes")
 
     # Build the unified prompt
     prompt = build_extraction_prompt(
@@ -873,7 +864,7 @@ def extract_rules_and_guidelines_batch(
 
     logger.info(
         f"Token tracking (batch) - Estimated input: {estimated_input}, "
-        f"Actual input: {actual_input} ({actual_input/estimated_input*100:.1f}%), "
+        f"Actual input: {actual_input} ({actual_input / estimated_input * 100:.1f}%), "
         f"Actual output: {actual_output}"
     )
 
@@ -994,7 +985,10 @@ def _analyze_prompt_tokens(prompt: str) -> dict[str, int]:
             start = matches[0].start()
             # Find the next section or end of prompt
             next_sections: list[int] = [
-                m.start() for _, next_marker in section_markers[section_markers.index((section_name, marker_pattern)) + 1:]
+                m.start()
+                for _, next_marker in section_markers[
+                    section_markers.index((section_name, marker_pattern)) + 1 :
+                ]
                 for m in re.finditer(next_marker, prompt, re.IGNORECASE)
             ]
             end = next_sections[0] if next_sections else len(prompt)
@@ -1032,12 +1026,16 @@ def _format_token_analysis(metadata: dict[str, Any]) -> str:
     report.append(f"Language Situation: {metadata['language_situation']}")
     report.append("")
     report.append(f"Document Content: {metadata['document_tokens']:,} tokens")
-    report.append(f"Total Prompt: {metadata['tokens']['total']:,} tokens ({metadata['tokens']['total_k']}k)")
+    report.append(
+        f"Total Prompt: {metadata['tokens']['total']:,} tokens ({metadata['tokens']['total_k']}k)"
+    )
     report.append("")
 
     # Calculate overhead
-    overhead = metadata['tokens']['total'] - metadata['document_tokens']
-    overhead_pct = (overhead / metadata['tokens']['total']) * 100 if metadata['tokens']['total'] > 0 else 0
+    overhead = metadata["tokens"]["total"] - metadata["document_tokens"]
+    overhead_pct = (
+        (overhead / metadata["tokens"]["total"]) * 100 if metadata["tokens"]["total"] > 0 else 0
+    )
     report.append(f"Prompt Overhead: {overhead:,} tokens ({overhead_pct:.1f}%)")
     report.append("")
 
@@ -1046,13 +1044,13 @@ def _format_token_analysis(metadata: dict[str, Any]) -> str:
     report.append("TOKEN BREAKDOWN BY SECTION")
     report.append("-" * 80)
 
-    by_section = metadata['tokens']['by_section']
+    by_section = metadata["tokens"]["by_section"]
     if by_section:
         # Sort by token count descending
         sorted_sections = sorted(by_section.items(), key=lambda x: x[1], reverse=True)
 
         for section_name, token_count in sorted_sections:
-            pct = (token_count / metadata['tokens']['total']) * 100
+            pct = (token_count / metadata["tokens"]["total"]) * 100
             bar_length = int(pct / 2)  # Scale to 50 chars max
             bar = "█" * bar_length
             report.append(f"{section_name:20} {token_count:6,} tokens  {pct:5.1f}%  {bar}")
@@ -1065,8 +1063,8 @@ def _format_token_analysis(metadata: dict[str, Any]) -> str:
     report.append("-" * 80)
 
     # Calculate costs
-    input_cost = (metadata['tokens']['total'] / 1_000_000) * 5  # $5 per 1M tokens
-    estimated_output = metadata['tokens']['total'] * 0.3  # Rough estimate
+    input_cost = (metadata["tokens"]["total"] / 1_000_000) * 5  # $5 per 1M tokens
+    estimated_output = metadata["tokens"]["total"] * 0.3  # Rough estimate
     output_cost = (estimated_output / 1_000_000) * 25  # $25 per 1M tokens
     total_cost = input_cost + output_cost
 
@@ -1106,18 +1104,24 @@ def _format_batch_token_analysis(metadata: dict[str, Any]) -> str:
 
     # Per-subtype breakdown
     report.append("By Subtype:")
-    for st_info in metadata['by_subtype']:
-        report.append(f"  - {st_info['subtype']:20} {st_info['document_count']:2} docs  "
-                     f"{st_info['tokens']:6,} tokens  ({st_info['language_situation']})")
+    for st_info in metadata["by_subtype"]:
+        report.append(
+            f"  - {st_info['subtype']:20} {st_info['document_count']:2} docs  "
+            f"{st_info['tokens']:6,} tokens  ({st_info['language_situation']})"
+        )
     report.append("")
 
     report.append(f"Document Content: {metadata['document_tokens']:,} tokens")
-    report.append(f"Total Prompt: {metadata['tokens']['total']:,} tokens ({metadata['tokens']['total_k']}k)")
+    report.append(
+        f"Total Prompt: {metadata['tokens']['total']:,} tokens ({metadata['tokens']['total_k']}k)"
+    )
     report.append("")
 
     # Calculate overhead
-    overhead = metadata['tokens']['total'] - metadata['document_tokens']
-    overhead_pct = (overhead / metadata['tokens']['total']) * 100 if metadata['tokens']['total'] > 0 else 0
+    overhead = metadata["tokens"]["total"] - metadata["document_tokens"]
+    overhead_pct = (
+        (overhead / metadata["tokens"]["total"]) * 100 if metadata["tokens"]["total"] > 0 else 0
+    )
     report.append(f"Prompt Overhead: {overhead:,} tokens ({overhead_pct:.1f}%)")
     report.append("")
 
@@ -1126,12 +1130,12 @@ def _format_batch_token_analysis(metadata: dict[str, Any]) -> str:
     report.append("TOKEN BREAKDOWN BY SECTION")
     report.append("-" * 80)
 
-    by_section = metadata['tokens']['by_section']
+    by_section = metadata["tokens"]["by_section"]
     if by_section:
         sorted_sections = sorted(by_section.items(), key=lambda x: x[1], reverse=True)
 
         for section_name, token_count in sorted_sections:
-            pct = (token_count / metadata['tokens']['total']) * 100
+            pct = (token_count / metadata["tokens"]["total"]) * 100
             bar_length = int(pct / 2)
             bar = "█" * bar_length
             report.append(f"{section_name:20} {token_count:6,} tokens  {pct:5.1f}%  {bar}")
@@ -1143,8 +1147,8 @@ def _format_batch_token_analysis(metadata: dict[str, Any]) -> str:
     report.append("COST ESTIMATE (Opus 4.5)")
     report.append("-" * 80)
 
-    input_cost = (metadata['tokens']['total'] / 1_000_000) * 5
-    estimated_output = metadata['tokens']['total'] * 0.3
+    input_cost = (metadata["tokens"]["total"] / 1_000_000) * 5
+    estimated_output = metadata["tokens"]["total"] * 0.3
     output_cost = (estimated_output / 1_000_000) * 25
     total_cost = input_cost + output_cost
 
@@ -1160,7 +1164,9 @@ def _format_batch_token_analysis(metadata: dict[str, Any]) -> str:
 
     # Estimate what individual processing would cost
     individual_overhead_per_subtype = 3000  # Approximate per-subtype overhead
-    individual_total = metadata['document_tokens'] + (individual_overhead_per_subtype * metadata['subtype_count'])
+    individual_total = metadata["document_tokens"] + (
+        individual_overhead_per_subtype * metadata["subtype_count"]
+    )
     individual_cost = (individual_total / 1_000_000) * 5 + (individual_total * 0.3 / 1_000_000) * 25
 
     savings = individual_cost - total_cost
@@ -1313,9 +1319,6 @@ def scan_client_folder(
                 total_tokens=total_tokens,
             )
             document_sets.append(doc_set)
-            logger.info(
-                f"Scanned {subtype}: {len(documents)} documents, "
-                f"{total_tokens:,} tokens"
-            )
+            logger.info(f"Scanned {subtype}: {len(documents)} documents, {total_tokens:,} tokens")
 
     return document_sets

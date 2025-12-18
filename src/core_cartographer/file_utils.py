@@ -10,11 +10,44 @@ from pathlib import Path
 from langdetect import LangDetectException, detect
 
 # Common language codes for filename detection
-LANGUAGE_CODES = frozenset([
-    "EN", "DE", "FR", "NL", "ES", "IT", "PT", "PL", "RU", "JA", "ZH", "KO",
-    "AR", "HE", "TR", "CS", "SK", "HU", "RO", "BG", "HR", "SL", "SR", "UK",
-    "DA", "NO", "SV", "FI", "EL", "TH", "VI", "ID", "MS", "TL",
-])
+LANGUAGE_CODES = frozenset(
+    [
+        "EN",
+        "DE",
+        "FR",
+        "NL",
+        "ES",
+        "IT",
+        "PT",
+        "PL",
+        "RU",
+        "JA",
+        "ZH",
+        "KO",
+        "AR",
+        "HE",
+        "TR",
+        "CS",
+        "SK",
+        "HU",
+        "RO",
+        "BG",
+        "HR",
+        "SL",
+        "SR",
+        "UK",
+        "DA",
+        "NO",
+        "SV",
+        "FI",
+        "EL",
+        "TH",
+        "VI",
+        "ID",
+        "MS",
+        "TL",
+    ]
+)
 
 
 def detect_language(text: str, sample_size: int = 1000) -> str:

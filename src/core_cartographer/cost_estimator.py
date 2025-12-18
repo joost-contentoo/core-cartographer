@@ -71,6 +71,7 @@ def estimate_cost(
     if round_to_nickel:
         # Round up to nearest $0.05
         import math
+
         return math.ceil(total_cost / 0.05) * 0.05
 
     return total_cost

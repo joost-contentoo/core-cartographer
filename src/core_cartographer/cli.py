@@ -159,16 +159,14 @@ def _process_documents(settings: Settings) -> None:
 
     # Ask about debug mode
     debug_mode = questionary.confirm(
-        "Enable debug mode? (Save prompts without calling API)",
-        default=False
+        "Enable debug mode? (Save prompts without calling API)", default=False
     ).ask()
 
     # Ask about batch processing (only if processing multiple subtypes)
     batch_processing = False
     if len(to_process) > 1:
         batch_processing = questionary.confirm(
-            "Use batch processing? (Process all subtypes in one API call)",
-            default=False
+            "Use batch processing? (Process all subtypes in one API call)", default=False
         ).ask()
 
     # Update settings with user choices
@@ -286,8 +284,7 @@ def _process_document_set(settings: Settings, doc_set: DocumentSet) -> None:
 
     # Show token usage
     console.print(
-        f"\n[dim]Tokens used: {result.input_tokens:,} input, "
-        f"{result.output_tokens:,} output[/dim]"
+        f"\n[dim]Tokens used: {result.input_tokens:,} input, {result.output_tokens:,} output[/dim]"
     )
 
     # Skip save in debug mode

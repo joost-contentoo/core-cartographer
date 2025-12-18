@@ -92,11 +92,13 @@ class DocumentSet:
         result = []
         for pair_id, docs in sorted(pairs.items()):
             if "source" in docs and "target" in docs:
-                result.append(DocumentPair(
-                    pair_id=pair_id,
-                    source=docs["source"],
-                    target=docs["target"],
-                ))
+                result.append(
+                    DocumentPair(
+                        pair_id=pair_id,
+                        source=docs["source"],
+                        target=docs["target"],
+                    )
+                )
 
         return result
 
@@ -112,10 +114,7 @@ class DocumentSet:
             paired_filenames.add(pair.source.filename)
             paired_filenames.add(pair.target.filename)
 
-        return [
-            doc for doc in self.documents
-            if doc.filename not in paired_filenames
-        ]
+        return [doc for doc in self.documents if doc.filename not in paired_filenames]
 
     @property
     def languages(self) -> set[str]:
