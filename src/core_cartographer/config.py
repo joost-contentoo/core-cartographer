@@ -58,12 +58,12 @@ class Settings(BaseSettings):
     @property
     def client_rules_example_path(self) -> Path:
         """Path to the client rules example file."""
-        return self.templates_dir / "client_rules_example.js"
+        return self.templates_dir / "client_rules_example_condensed.js"
 
     @property
     def guidelines_example_path(self) -> Path:
         """Path to the guidelines example file."""
-        return self.templates_dir / "guidelines_example.md"
+        return self.templates_dir / "guidelines_example_condensed.md"
 
     @property
     def extraction_instructions_path(self) -> Path:

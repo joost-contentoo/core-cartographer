@@ -45,27 +45,12 @@ CRITICAL DISTINCTION:
 
 def _build_output_spec_section(settings: Settings) -> str:
     """Build the output specification section with annotated examples."""
-    # Try condensed template first, fall back to verbose if it doesn't exist
-    condensed_rules_path = settings.templates_dir / "client_rules_example_condensed.js"
-    if condensed_rules_path.exists():
-        client_rules_example = condensed_rules_path.read_text(encoding="utf-8")
-    else:
-        client_rules_example = settings.client_rules_example_path.read_text(encoding="utf-8")
+    # Load condensed templates
+    client_rules_path = settings.templates_dir / "client_rules_example_condensed.js"
+    client_rules_example = client_rules_path.read_text(encoding="utf-8")
 
-    # Try condensed guidelines template
-    condensed_guidelines_path = settings.templates_dir / "guidelines_example_condensed.md"
-    if condensed_guidelines_path.exists():
-        guidelines_template = condensed_guidelines_path.read_text(encoding="utf-8")
-    else:
-        # Fall back to just headers from full template
-        guidelines_example_path = settings.guidelines_example_path
-        guidelines_content = guidelines_example_path.read_text(encoding="utf-8")
-        guidelines_lines = guidelines_content.split("\n")
-        section_headers = [
-            line for line in guidelines_lines
-            if line.startswith("## ") and not line.startswith("### ")
-        ][:12]
-        guidelines_template = "\n".join(section_headers)
+    guidelines_path = settings.templates_dir / "guidelines_example_condensed.md"
+    guidelines_template = guidelines_path.read_text(encoding="utf-8")
 
     return f"""
 ═══════════════════════════════════════════════════════════════════════════════
@@ -77,19 +62,20 @@ Output 1: client_rules.js
 {client_rules_example}
 ```
 
-Output 2: guidelines.md (CONDENSED FORMAT - 80-120 lines STRICT)
+Output 2: guidelines.md (CONDENSED FORMAT - 80-150 lines target)
 ```markdown
 {guidelines_template}
 ```
 
 GUIDELINES.MD FORMAT REQUIREMENTS:
 
-LENGTH: 80-120 lines maximum. This is STRICT.
+LENGTH: 80-150 lines target. Prioritize completeness over strict brevity.
 
-STRUCTURE: Exactly 3 sections only:
+STRUCTURE: Exactly 4 sections:
 1. ## Voice - Brand personality, tone markers, emotional register, avoid/prefer patterns
-2. ## Cultural Adaptation - Market values to emphasize, localization notes
-3. ## Transformation Examples - 3-5 source→target examples with explanations
+2. ## Writing Style - Localization philosophy, sentence preferences, structural patterns, content type adjustments
+3. ## Cultural Adaptation - Market values, payment/trust context, localization notes
+4. ## Transformation Examples - 5 source→target examples with explanations
 
 FORMAT RULES:
 - Use key-value format (LABEL: value), NOT markdown tables
@@ -99,8 +85,13 @@ FORMAT RULES:
 
 CONTENT TO INCLUDE:
 - Forbidden words/patterns in AVOID section (e.g., "Formal address (Sie, Ihnen): Use informal 'du' throughout")
-- Currency/number format rules in LOCALIZATION NOTES (e.g., "Currency: Use format 'X €'")
-- Voice, tone, cultural values that help LLMs write correctly first time
+- Localization philosophy in PHILOSOPHY (e.g., "Adaptation, not translation. Content may differ 10-20% in structure.")
+- Sentence preferences (front-loaded info, shorter sentences, active voice)
+- Structural patterns (questions as openers, practical urgency signals, step-by-step with closure)
+- Content type tone adjustments (payment vs gift vs gaming products)
+- Market values and payment/trust context
+- Currency/format rules in LOCALIZATION NOTES
+- 5 transformation examples covering different content types
 
 CONTENT TO EXCLUDE (these go in client_rules.js or are handled elsewhere):
 - Character/word limits (code validates these)
@@ -248,12 +239,11 @@ def _build_response_format_section(document_sets: list[DocumentSet]) -> str:
     subtype_names = [ds.subtype for ds in document_sets]
 
     guidelines_structure = """
-GUIDELINES STRUCTURE (80-120 lines, exactly 3 sections):
+GUIDELINES STRUCTURE (80-150 lines, exactly 4 sections):
 
 ## Voice
 PERSONALITY: [1-2 sentences]
 TONE MARKERS:
-- [quality]: [expression]
 - [quality]: [expression]
 EMOTIONAL REGISTER: [1 sentence]
 AVOID:
@@ -261,18 +251,29 @@ AVOID:
 PREFER:
 - [pattern]: [example]
 
+## Writing Style
+PHILOSOPHY: [localization approach - adaptation vs translation]
+SENTENCE PREFERENCES:
+- [preference]: [explanation]
+STRUCTURAL PATTERNS:
+- [pattern]: [example]
+CONTENT TYPE ADJUSTMENTS:
+- [type]: [tone shift]
+
 ## Cultural Adaptation
-EMPHASIZE FOR [MARKET]:
+MARKET VALUES FOR [MARKET]:
 - [value]: [how to express]
+PAYMENT/TRUST CONTEXT:
+- [context]
 LOCALIZATION NOTES:
-- [adaptation rule]
+- [note]
 
 ## Transformation Examples
 EXAMPLE 1 - [type]:
 Source: "[text]"
 Target: "[text]"
 Change: [explanation]
-(Include 3-5 examples)"""
+(Include 5 examples covering different content types)"""
 
     if len(document_sets) == 1:
         return f"""
@@ -397,8 +398,8 @@ def _validate_guidelines(guidelines: str, subtype: str = "unknown") -> str:
     """Validate and log warnings for guidelines that don't meet requirements.
 
     Checks for:
-    - Line count (should be 80-120, warn if >120)
-    - Required sections (Voice, Cultural Adaptation, Transformation Examples)
+    - Line count (should be 80-150, warn if >150)
+    - Required sections (Voice, Writing Style, Cultural Adaptation, Transformation Examples)
     - Forbidden content (tables, horizontal rules)
 
     Args:
@@ -415,14 +416,19 @@ def _validate_guidelines(guidelines: str, subtype: str = "unknown") -> str:
     line_count = len(lines)
 
     # Check line count
-    if line_count > 120:
+    if line_count > 150:
         logger.warning(
             f"[{subtype}] Guidelines exceed recommended length: {line_count} lines "
-            f"(target: 80-120). Consider condensing."
+            f"(target: 80-150). Consider condensing."
         )
 
     # Check for required sections
-    required_sections = ["## Voice", "## Cultural Adaptation", "## Transformation Examples"]
+    required_sections = [
+        "## Voice",
+        "## Writing Style",
+        "## Cultural Adaptation",
+        "## Transformation Examples",
+    ]
     missing_sections = []
     for section in required_sections:
         if section.lower() not in guidelines.lower():
@@ -451,7 +457,7 @@ def _validate_guidelines(guidelines: str, subtype: str = "unknown") -> str:
     if re.search(r"## \d+\.", guidelines):
         logger.warning(
             f"[{subtype}] Guidelines contain numbered section headers (## 1. etc). "
-            f"Use simple headers (## Voice, ## Cultural Adaptation, ## Transformation Examples)."
+            f"Use simple headers (## Voice, ## Writing Style, ## Cultural Adaptation, ## Transformation Examples)."
         )
 
     return guidelines

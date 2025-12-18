@@ -71,12 +71,12 @@ class TestSettingsPropertyPaths:
     def test_client_rules_example_path(self) -> None:
         """Test client rules example path property."""
         settings = Settings(anthropic_api_key="test-key")
-        assert settings.client_rules_example_path == Path("./templates/client_rules_example.js")
+        assert settings.client_rules_example_path == Path("./templates/client_rules_example_condensed.js")
 
     def test_guidelines_example_path(self) -> None:
         """Test guidelines example path property."""
         settings = Settings(anthropic_api_key="test-key")
-        assert settings.guidelines_example_path == Path("./templates/guidelines_example.md")
+        assert settings.guidelines_example_path == Path("./templates/guidelines_example_condensed.md")
 
     def test_extraction_instructions_path(self) -> None:
         """Test extraction instructions path property."""
@@ -90,8 +90,8 @@ class TestSettingsPropertyPaths:
             anthropic_api_key="test-key",
             templates_dir=Path("/custom/templates")
         )
-        expected_rules = Path("/custom/templates/client_rules_example.js")
-        expected_guidelines = Path("/custom/templates/guidelines_example.md")
+        expected_rules = Path("/custom/templates/client_rules_example_condensed.js")
+        expected_guidelines = Path("/custom/templates/guidelines_example_condensed.md")
         assert settings.client_rules_example_path == expected_rules
         assert settings.guidelines_example_path == expected_guidelines
 
