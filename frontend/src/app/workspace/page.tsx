@@ -3,8 +3,16 @@
 import { useState, useCallback } from "react";
 import { useProjectStore } from "@/lib/store";
 import { api } from "@/lib/api";
-import { formatTokens, formatCost, isSupportedFileType } from "@/lib/utils";
+import { isSupportedFileType } from "@/lib/utils";
 import type { SSEEvent } from "@/lib/api";
+import {
+  FileUploadZone,
+  FileList,
+  SubtypeManager,
+  CostDisplay,
+  ExtractionProgress,
+  FilePreview,
+} from "@/components/project";
 import {
   Button,
   Card,
@@ -14,14 +22,8 @@ import {
   CardTitle,
   Input,
   Label,
-  Badge,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from "@/components/ui";
-import { Upload, FileText, Loader2, Sparkles, Search, Trash2, Plus } from "lucide-react";
+import { Search, Sparkles, Loader2 } from "lucide-react";
 
 export default function WorkspacePage() {
   const {
@@ -31,8 +33,11 @@ export default function WorkspacePage() {
     addFile,
     updateFile,
     removeFile,
+    selectedFileId,
+    setSelectedFile,
     subtypes,
     addSubtype,
+    removeSubtype,
     settings,
     extraction,
     setExtractionProgress,
@@ -45,11 +50,11 @@ export default function WorkspacePage() {
   const [uploading, setUploading] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [newSubtype, setNewSubtype] = useState("");
+  const [cancelExtraction, setCancelExtraction] = useState<(() => void) | null>(null);
 
   // File upload handler
   const handleFileUpload = useCallback(
-    async (fileList: FileList | null) => {
+    async (fileList: FileList) => {
       if (!fileList || fileList.length === 0) return;
 
       setUploading(true);
@@ -134,7 +139,7 @@ export default function WorkspacePage() {
         })),
     }));
 
-    api.extractWithSSE(
+    const cancel = api.extractWithSSE(
       {
         clientName,
         documentSets: documentSets.filter((ds) => ds.files.length > 0),
@@ -180,6 +185,7 @@ export default function WorkspacePage() {
               currentSubtype: null,
             });
             setExtracting(false);
+            setCancelExtraction(null);
             break;
 
           case "error":
@@ -189,6 +195,7 @@ export default function WorkspacePage() {
               error: event.message,
             });
             setExtracting(false);
+            setCancelExtraction(null);
             break;
         }
       },
@@ -199,8 +206,11 @@ export default function WorkspacePage() {
           error: err.message,
         });
         setExtracting(false);
+        setCancelExtraction(null);
       }
     );
+
+    setCancelExtraction(() => cancel);
   }, [
     clientName,
     files,
@@ -211,12 +221,21 @@ export default function WorkspacePage() {
     setResults,
   ]);
 
-  const handleAddSubtype = () => {
-    if (newSubtype && !subtypes.includes(newSubtype)) {
-      addSubtype(newSubtype);
-      setNewSubtype("");
+  const handleCancelExtraction = useCallback(() => {
+    if (cancelExtraction) {
+      cancelExtraction();
+      setExtracting(false);
+      setExtractionProgress({
+        status: "idle",
+        currentSubtype: null,
+        completedSubtypes: [],
+        totalSubtypes: 0,
+      });
+      setCancelExtraction(null);
     }
-  };
+  }, [cancelExtraction, setExtractionProgress]);
+
+  const selectedFile = files.find((f) => f.fileId === selectedFileId) || null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 p-8">
@@ -275,141 +294,32 @@ export default function WorkspacePage() {
             </Card>
 
             {/* File Upload */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">Upload Files</CardTitle>
-                <CardDescription>
-                  Add your documentation files (PDF, DOCX, TXT, MD)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="border-2 border-dashed border-primary-300 rounded-xl p-8 text-center hover:border-primary-500 transition-colors">
-                  <input
-                    type="file"
-                    multiple
-                    accept=".pdf,.docx,.txt,.md"
-                    onChange={(e) => handleFileUpload(e.target.files)}
-                    className="hidden"
-                    id="file-upload"
-                    disabled={uploading}
-                  />
-                  <label
-                    htmlFor="file-upload"
-                    className="cursor-pointer flex flex-col items-center gap-3"
-                  >
-                    {uploading ? (
-                      <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                    ) : (
-                      <Upload className="w-12 h-12 text-primary" />
-                    )}
-                    <div>
-                      <p className="text-primary-700 font-medium">
-                        {uploading
-                          ? "Uploading..."
-                          : "Click to upload or drag files here"}
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        PDF, DOCX, TXT, MD (max 10MB per file)
-                      </p>
-                    </div>
-                  </label>
-                </div>
-              </CardContent>
-            </Card>
+            <FileUploadZone
+              onFilesSelected={handleFileUpload}
+              uploading={uploading}
+              disabled={uploading}
+            />
 
             {/* File List */}
-            {files.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl flex items-center gap-2">
-                    <FileText className="w-5 h-5" />
-                    Files ({files.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {files.map((file) => (
-                      <div
-                        key={file.fileId}
-                        className="flex items-center gap-3 p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
-                      >
-                        <FileText className="w-5 h-5 text-primary shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">{file.filename}</div>
-                          <div className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap">
-                            <Badge variant="secondary">
-                              {file.language.toUpperCase()}
-                            </Badge>
-                            <span>{formatTokens(file.tokens)} tokens</span>
-                            {file.pairId && (
-                              <Badge variant="outline">Pair #{file.pairId}</Badge>
-                            )}
-                          </div>
-                        </div>
-                        <Select
-                          value={file.subtype}
-                          onValueChange={(value) =>
-                            updateFile(file.fileId, { subtype: value })
-                          }
-                        >
-                          <SelectTrigger className="w-[140px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {subtypes.map((st) => (
-                              <SelectItem key={st} value={st}>
-                                {st}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeFile(file.fileId)}
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            <FileList
+              files={files}
+              subtypes={subtypes}
+              selectedFileId={selectedFileId}
+              onSelectFile={setSelectedFile}
+              onUpdateFile={updateFile}
+              onDeleteFile={removeFile}
+            />
 
             {/* Categories */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">Categories</CardTitle>
-                <CardDescription>
-                  Organize files into content categories
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex gap-2 mb-3 flex-wrap">
-                  {subtypes.map((st) => (
-                    <Badge key={st} variant="default" className="text-sm px-3 py-1">
-                      {st}
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    value={newSubtype}
-                    onChange={(e) => setNewSubtype(e.target.value)}
-                    placeholder="New category"
-                    onKeyPress={(e) => e.key === "Enter" && handleAddSubtype()}
-                  />
-                  <Button onClick={handleAddSubtype} size="md">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <SubtypeManager
+              subtypes={subtypes}
+              onAddSubtype={addSubtype}
+              onRemoveSubtype={removeSubtype}
+              disabled={extracting}
+            />
           </div>
 
-          {/* Actions Panel (1 column) */}
+          {/* Right Panel (1 column) */}
           <div className="space-y-6">
             {/* Actions Card */}
             <Card>
@@ -442,42 +352,13 @@ export default function WorkspacePage() {
             </Card>
 
             {/* Cost Display */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">Cost Estimate</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-primary-700 mb-1">
-                  {formatCost(estimatedCost())}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {formatTokens(totalTokens())} tokens
-                </div>
-              </CardContent>
-            </Card>
+            <CostDisplay
+              totalTokens={totalTokens()}
+              estimatedCost={estimatedCost()}
+            />
 
-            {/* Progress */}
-            {extraction.status === "running" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl">Progress</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">
-                      {extraction.completedSubtypes.length} of{" "}
-                      {extraction.totalSubtypes} complete
-                    </div>
-                    {extraction.currentSubtype && (
-                      <div className="text-sm text-primary flex items-center gap-2">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Processing: {extraction.currentSubtype}
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {/* File Preview */}
+            <FilePreview file={selectedFile} />
 
             {/* Results */}
             {results && (
@@ -524,6 +405,13 @@ export default function WorkspacePage() {
           </div>
         </div>
       </div>
+
+      {/* Extraction Progress Modal */}
+      <ExtractionProgress
+        progress={extraction}
+        subtypes={subtypes}
+        onCancel={extracting ? handleCancelExtraction : undefined}
+      />
     </div>
   );
 }

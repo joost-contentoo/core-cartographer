@@ -1,0 +1,60 @@
+#!/bin/bash
+# Check implementation status
+
+echo "=== WEEK 1: Walking Skeleton ==="
+echo ""
+
+# Backend
+echo "Backend:"
+[ -f "backend/src/cache/file_cache.py" ] && echo "  ✓ File cache system" || echo "  ✗ File cache system"
+[ -f "backend/src/api/main.py" ] && echo "  ✓ FastAPI main.py" || echo "  ✗ FastAPI main.py"
+[ -f "backend/src/api/routes/files.py" ] && echo "  ✓ /files/parse endpoint" || echo "  ✗ /files/parse endpoint"
+[ -f "backend/src/api/routes/extraction.py" ] && echo "  ✓ /extraction/extract-stream endpoint" || echo "  ✗ /extraction/extract-stream endpoint"
+[ -f "backend/requirements.txt" ] && echo "  ✓ Backend requirements.txt" || echo "  ✗ Backend requirements.txt"
+
+echo ""
+echo "Frontend:"
+[ -d "frontend/src" ] && echo "  ✓ Next.js project" || echo "  ✗ Next.js project"
+[ -f "frontend/tailwind.config.ts" ] && echo "  ✓ Tailwind configured" || echo "  ✗ Tailwind configured"
+[ -f "frontend/src/lib/store.ts" ] && echo "  ✓ Zustand store" || echo "  ✗ Zustand store"
+[ -f "frontend/src/lib/api.ts" ] && echo "  ✓ API client" || echo "  ✗ API client"
+[ -f "frontend/src/app/workspace/page.tsx" ] && echo "  ✓ Workspace page" || echo "  ✗ Workspace page"
+
+echo ""
+echo "Infrastructure:"
+[ -f "docker-compose.yml" ] && echo "  ✓ Docker Compose" || echo "  ✗ Docker Compose"
+[ -f "backend/Dockerfile" ] && echo "  ✓ Backend Dockerfile" || echo "  ✗ Backend Dockerfile"
+[ -f "frontend/Dockerfile" ] && echo "  ✓ Frontend Dockerfile" || echo "  ✗ Frontend Dockerfile"
+
+echo ""
+echo "=== WEEK 2: Backend Completion + UI Foundation ==="
+echo ""
+[ -f "backend/src/api/routes/analysis.py" ] && echo "  ✓ /analysis/auto-detect endpoint" || echo "  ✗ /analysis/auto-detect endpoint"
+grep -q "delete_file" backend/src/api/routes/files.py 2>/dev/null && echo "  ✓ File deletion endpoint" || echo "  ✗ File deletion endpoint"
+[ -f "frontend/src/components/ui/button.tsx" ] && echo "  ✓ UI components (Button)" || echo "  ✗ UI components"
+[ -f "frontend/src/components/ui/card.tsx" ] && echo "  ✓ UI components (Card)" || echo "  ✗ UI components (Card)"
+[ -f "frontend/src/components/ui/input.tsx" ] && echo "  ✓ UI components (Input)" || echo "  ✗ UI components (Input)"
+[ -f "frontend/src/components/ui/select.tsx" ] && echo "  ✓ UI components (Select)" || echo "  ✗ UI components (Select)"
+[ -f "frontend/src/components/ui/dialog.tsx" ] && echo "  ✓ UI components (Dialog)" || echo "  ✗ UI components (Dialog)"
+[ -f "frontend/src/styles/globals.css" ] && echo "  ✓ Portal-localiser theme" || echo "  ✗ Portal-localiser theme"
+
+echo ""
+echo "=== WEEK 3: File Management ==="
+echo ""
+[ -f "frontend/src/components/project/FileUploadZone.tsx" ] && echo "  ✓ FileUploadZone with drag-and-drop" || echo "  ✗ FileUploadZone"
+[ -f "frontend/src/components/project/FileList.tsx" ] && echo "  ✓ FileList with inline editing" || echo "  ✗ FileList"
+[ -f "frontend/src/components/project/FileItem.tsx" ] && echo "  ✓ FileItem with deletion" || echo "  ✗ FileItem"
+[ -f "frontend/src/components/project/SubtypeManager.tsx" ] && echo "  ✓ SubtypeManager" || echo "  ✗ SubtypeManager"
+[ -f "frontend/src/components/project/CostDisplay.tsx" ] && echo "  ✓ CostDisplay" || echo "  ✗ CostDisplay"
+[ -f "frontend/src/components/project/FilePreview.tsx" ] && echo "  ✓ FilePreview" || echo "  ✗ FilePreview"
+[ -f "frontend/src/components/project/ExtractionProgress.tsx" ] && echo "  ✓ ExtractionProgress" || echo "  ✗ ExtractionProgress"
+
+echo ""
+echo "=== WEEK 4: Extraction Flow ==="
+echo ""
+[ -f "frontend/src/components/project/SettingsPanel.tsx" ] && echo "  ✓ SettingsPanel" || echo "  ✗ SettingsPanel"
+[ -f "frontend/src/components/results/ResultsDialog.tsx" ] && echo "  ✓ ResultsDialog" || echo "  ✗ ResultsDialog"
+grep -q "Prism\|highlight" frontend/package.json 2>/dev/null && echo "  ✓ Syntax highlighting" || echo "  ✗ Syntax highlighting"
+grep -q "markdown\|remark\|rehype" frontend/package.json 2>/dev/null && echo "  ✓ Markdown rendering" || echo "  ✗ Markdown rendering"
+
+echo ""

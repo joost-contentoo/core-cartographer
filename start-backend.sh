@@ -1,26 +1,29 @@
 #!/bin/bash
+# Start the FastAPI backend
 
-# Start backend from project root so imports work
-cd "$(dirname "$0")"
-
-# Check for .env
-if [ ! -f .env ]; then
-    echo "ERROR: .env file not found. Please create one from .env.example"
-    exit 1
-fi
-
-# Export environment variables
-export $(cat .env | grep -v '^#' | xargs)
-
-# Add backend to PYTHONPATH
-export PYTHONPATH="${PWD}:${PWD}/backend:${PWD}/src:${PYTHONPATH}"
-
-echo "Starting Core Cartographer Backend..."
-echo "API will be available at http://localhost:8000"
-echo "Docs available at http://localhost:8000/docs"
+echo "🚀 Starting Core Cartographer Backend..."
 echo ""
 
+# Check if we're in a virtual environment
+if [ -z "$VIRTUAL_ENV" ]; then
+    echo "⚠️  No virtual environment detected. Activating .venv..."
+    source .venv/bin/activate
+fi
+
+# Install backend dependencies if needed
+echo "📦 Checking backend dependencies..."
 cd backend
-source venv/bin/activate
+pip install -q -r requirements.txt
+
+# Start the backend server
+echo ""
+echo "✓ Backend starting at http://localhost:8000"
+echo "✓ API docs available at http://localhost:8000/docs"
+echo ""
+echo "Press Ctrl+C to stop the server"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
 cd ..
-uvicorn backend.src.api.main:app --reload --host 0.0.0.0 --port 8000
+export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+uvicorn backend.src.api.main:app --host 0.0.0.0 --port 8000 --reload

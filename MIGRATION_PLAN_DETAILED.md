@@ -1295,72 +1295,87 @@ CMD ["npm", "run", "dev"]
 
 ## 6. MIGRATION STRATEGY (6 Weeks)
 
-### Week 1: Walking Skeleton
+### 📊 Overall Progress: Week 3+ Complete (60%+)
+
+| Week | Status | Progress |
+|------|--------|----------|
+| Week 1: Walking Skeleton | ✅ COMPLETE | 100% (8/8) |
+| Week 2: Backend + UI Foundation | ✅ COMPLETE | 100% (6/6) |
+| Week 3: File Management | ✅ COMPLETE | 100% (6/6) |
+| Week 4: Extraction Flow | ⚠️ PARTIAL | 29% (2/7) |
+| Week 5: Polish & Error Handling | ⚠️ PARTIAL | 50% (4/8) |
+| Week 6: Testing & Documentation | ⏳ NOT STARTED | 0% (0/7) |
+
+**Current Status:** Core functionality complete. Extraction works end-to-end with SSE streaming, cancellation, and cost estimation. Missing: Settings UI panel, results dialog with tabs, syntax highlighting, markdown rendering, download buttons, and polish features.
+
+---
+
+### Week 1: Walking Skeleton ✅ COMPLETE
 **Goal:** End-to-end data flow with minimal UI
 
-- [ ] Set up backend project structure
-- [ ] Implement file cache system
-- [ ] Create `/files/parse` endpoint
-- [ ] Create `/extraction/extract-stream` endpoint (basic)
-- [ ] Set up Next.js project with Tailwind
-- [ ] Create minimal Zustand store
-- [ ] Build ugly but functional upload → extract → results flow
-- [ ] Docker Compose working
+- [x] Set up backend project structure
+- [x] Implement file cache system
+- [x] Create `/files/parse` endpoint
+- [x] Create `/extraction/extract-stream` endpoint (basic)
+- [x] Set up Next.js project with Tailwind
+- [x] Create minimal Zustand store
+- [x] Build ugly but functional upload → extract → results flow
+- [x] Docker Compose working
 
 **Deliverable:** Can upload a file, hit extract, see results (ugly UI is fine)
 
-### Week 2: Backend Completion + UI Foundation
+### Week 2: Backend Completion + UI Foundation ✅ COMPLETE
 **Goal:** All API endpoints working, design system in place
 
-- [ ] Implement `/analysis/auto-detect` endpoint
-- [ ] Add file deletion endpoint
-- [ ] Add error handling to all endpoints
-- [ ] Implement portal-localiser design system
-- [ ] Create base UI components (Button, Card, Input, Select, Dialog)
-- [ ] Apply styling to workspace layout
+- [x] Implement `/analysis/auto-detect` endpoint
+- [x] Add file deletion endpoint
+- [x] Add error handling to all endpoints
+- [x] Implement portal-localiser design system
+- [x] Create base UI components (Button, Card, Input, Select, Dialog)
+- [x] Apply styling to workspace layout
 
 **Deliverable:** Backend feature-complete, UI looks good but sparse
 
-### Week 3: File Management
+### Week 3: File Management ✅ COMPLETE
 **Goal:** Full file upload and organization UX
 
-- [ ] Build FileUploadZone with drag-and-drop
-- [ ] Build FileList with inline editing
-- [ ] Implement file deletion with confirmation
-- [ ] Build SubtypeManager (add/remove categories)
-- [ ] Connect auto-detect to UI
-- [ ] Show file preview when selected
+- [x] Build FileUploadZone with drag-and-drop
+- [x] Build FileList with inline editing
+- [x] Implement file deletion with confirmation
+- [x] Build SubtypeManager (add/remove categories)
+- [x] Connect auto-detect to UI
+- [x] Show file preview when selected
 
 **Deliverable:** File management fully functional
 
-### Week 4: Extraction Flow
+### Week 4: Extraction Flow ⚠️ PARTIALLY COMPLETE
 **Goal:** Complete extraction with progress and results
 
-- [ ] Build SettingsPanel
-- [ ] Build ExtractionProgress modal with SSE
-- [ ] Implement cancellation
-- [ ] Build ResultsDialog with tabs
+- [ ] Build SettingsPanel (settings exist in store, no UI panel yet)
+- [x] Build ExtractionProgress modal with SSE
+- [x] Implement cancellation
+- [ ] Build ResultsDialog with tabs (results shown inline, not in modal)
 - [ ] Add syntax highlighting for JS
 - [ ] Add markdown rendering
 - [ ] Implement download buttons
 
-**Deliverable:** Full extraction flow working
+**Deliverable:** Full extraction flow working (extraction works, results need polish)
 
-### Week 5: Polish & Error Handling
+### Week 5: Polish & Error Handling ⚠️ PARTIALLY COMPLETE
 **Goal:** Production-ready UX
 
-- [ ] Add comprehensive error handling
-- [ ] Error toasts for API failures
+- [x] Add comprehensive error handling
+- [x] Error banners for API failures
 - [ ] Retry buttons where appropriate
-- [ ] Loading states everywhere
-- [ ] Empty states
+- [x] Loading states everywhere
+- [ ] Empty states (basic, could be enhanced)
 - [ ] Keyboard shortcuts (Delete, Enter to extract)
 - [ ] Add animations/transitions
-- [ ] Cost estimation display
+- [x] Cost estimation display
 
-**Deliverable:** Polished, error-resilient application
+**Deliverable:** Polished, error-resilient application (functional, needs polish)
 
-### Week 6: Testing & Documentation
+### Week 6: Testing & Documentation ⏳ NOT STARTED
 **Goal:** Ready for deployment
 
 - [ ] End-to-end testing (manual test matrix)
@@ -1479,11 +1494,11 @@ sse-starlette>=1.8.0
 - [x] Auto-detection (languages, pairs)
 - [x] SSE extraction with progress
 - [x] Cancellable extraction
-- [x] Results viewer with syntax highlighting
-- [x] Download results
+- [ ] Results viewer with syntax highlighting (basic viewer exists, no syntax highlighting)
+- [ ] Download results (not implemented yet)
 - [x] Live cost estimation
-- [x] Settings panel (batch mode, debug mode)
-- [x] Error handling with toasts
+- [ ] Settings panel (batch mode, debug mode) (settings exist in store, no UI panel)
+- [x] Error handling with banners
 
 ### Future (V1.1+)
 - [ ] Keyboard shortcuts

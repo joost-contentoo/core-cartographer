@@ -8,7 +8,7 @@ from pathlib import Path
 # Add parent directory to path to import core_cartographer
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
 
-from core_cartographer.file_utils import detect_language, find_translation_pair
+from core_cartographer.file_utils import detect_language, find_translation_pair, find_base_name
 from ...cache.file_cache import file_cache
 from ..models.requests import AnalysisRequest
 from ..models.responses import AnalysisResponse
@@ -92,12 +92,17 @@ async def run_auto_detect(request: AnalysisRequest):
 
             if cached_a and cached_b:
                 try:
-                    is_pair = find_translation_pair(
+                    # Get base names for both files
+                    base_name_b = find_base_name(file_b["filename"])
+
+                    matched_filename = find_translation_pair(
                         file_a["filename"],
                         file_a["language"],
-                        [(file_b["filename"], file_b["language"])],
+                        [(file_b["filename"], file_b["language"], base_name_b)],
                         {file_a["filename"]: cached_a.content, file_b["filename"]: cached_b.content}
                     )
+
+                    is_pair = matched_filename is not None
 
                     if is_pair:
                         file_a["pair_id"] = str(pair_counter)
