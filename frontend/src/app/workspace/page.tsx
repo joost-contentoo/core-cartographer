@@ -52,6 +52,7 @@ export default function WorkspacePage() {
 
   const [uploading, setUploading] = useState(false);
   const [extracting, setExtracting] = useState(false);
+  const [detecting, setDetecting] = useState(false);
   const [error, setError] = useState<{ message: string; retry?: () => void } | null>(null);
   const [cancelExtraction, setCancelExtraction] = useState<(() => void) | null>(null);
   const [showResults, setShowResults] = useState(false);
@@ -114,6 +115,7 @@ export default function WorkspacePage() {
 
     try {
       setError(null);
+      setDetecting(true);
       const result = await api.runAutoDetect(files.map((f) => f.fileId));
 
       result.files.forEach((detectedFile) => {
@@ -127,6 +129,8 @@ export default function WorkspacePage() {
         message: err instanceof Error ? err.message : "Auto-detect failed",
         retry: handleAutoDetect,
       });
+    } finally {
+      setDetecting(false);
     }
   }, [files, updateFile]);
 
@@ -410,13 +414,17 @@ export default function WorkspacePage() {
               <div className="flex items-center gap-2">
                 <Button
                   onClick={handleAutoDetect}
-                  disabled={files.length === 0}
+                  disabled={files.length === 0 || detecting}
                   variant="secondary"
                   size="sm"
                   className="h-9"
                 >
-                  <Search className="w-4 h-4 mr-2" />
-                  Auto-Detect
+                  {detecting ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Search className="w-4 h-4 mr-2" />
+                  )}
+                  {detecting ? "Detecting..." : "Auto-Detect"}
                 </Button>
                 <Button
                   onClick={handleExtraction}

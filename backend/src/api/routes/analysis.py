@@ -73,13 +73,27 @@ async def run_auto_detect(request: AnalysisRequest):
     pair_counter = 1
     paired_ids = set()
 
+    # Debug: log all base names
+    logger.info("Base names for pairing:")
+    for r in results:
+        base = find_base_name(r["filename"])
+        logger.info(f"  {r['filename']} -> base='{base}' lang={r['language']}")
+
     for i, file_a in enumerate(results):
         if file_a["file_id"] in paired_ids:
             continue
 
+        base_a = find_base_name(file_a["filename"])
+
         for file_b in results[i+1:]:
             if file_b["file_id"] in paired_ids:
                 continue
+
+            base_b = find_base_name(file_b["filename"])
+
+            # Debug: log comparison
+            if base_a == base_b:
+                logger.info(f"Base match: {file_a['filename']} ({file_a['language']}) <-> {file_b['filename']} ({file_b['language']})")
 
             # Check if they're a pair
             cached_a = file_cache.get(file_a["file_id"])
@@ -87,13 +101,10 @@ async def run_auto_detect(request: AnalysisRequest):
 
             if cached_a and cached_b:
                 try:
-                    # Get base names for both files
-                    base_name_b = find_base_name(file_b["filename"])
-
                     matched_filename = find_translation_pair(
                         file_a["filename"],
                         file_a["language"],
-                        [(file_b["filename"], file_b["language"], base_name_b)],
+                        [(file_b["filename"], file_b["language"], base_b)],
                         {file_a["filename"]: cached_a.content, file_b["filename"]: cached_b.content}
                     )
 
