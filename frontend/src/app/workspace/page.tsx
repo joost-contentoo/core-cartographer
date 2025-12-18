@@ -324,21 +324,29 @@ export default function WorkspacePage() {
   const selectedFile = files.find((f) => f.fileId === selectedFileId) || null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-muted/30 p-6 md:p-8">
+      <div className="max-w-[1600px] mx-auto space-y-8">
         {/* Header */}
-        <header className="mb-8">
-          <h1 className="text-4xl font-bold text-primary-800 mb-2">
-            Core Cartographer
-          </h1>
-          <p className="text-primary-600">
-            Extract localization rules and guidelines from documentation
-          </p>
+        <header className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 text-primary">
+            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <span className="font-semibold tracking-tight text-sm uppercase">Core Cartographer</span>
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              Workspace
+            </h1>
+            <p className="text-muted-foreground text-lg max-w-2xl mt-1">
+              Extract localization rules and guidelines from your project documentation.
+            </p>
+          </div>
         </header>
 
         {/* Error Banner */}
         {error && (
-          <Card className="mb-6 border-destructive bg-destructive/10 animate-in slide-in-from-top-2 duration-300">
+          <Card className="border-destructive/50 bg-destructive/10 animate-in slide-in-from-top-2 duration-300">
             <CardContent className="pt-6">
               <div className="flex items-start gap-3">
                 <span className="text-destructive text-lg">⚠️</span>
@@ -362,6 +370,7 @@ export default function WorkspacePage() {
                     variant="ghost"
                     size="sm"
                     onClick={() => setError(null)}
+                    className="hover:bg-destructive/10 hover:text-destructive"
                   >
                     ✕
                   </Button>
@@ -371,16 +380,24 @@ export default function WorkspacePage() {
           </Card>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Panel (2 columns) */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Client Name */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">Project Details</CardTitle>
-                <CardDescription>Enter the client name to begin</CardDescription>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* LEFT COLUMN: Command Center (Inputs & Controls) - Spans 5 columns */}
+          <div className="lg:col-span-5 space-y-6">
+
+            {/* 1. Project Context & Actions (Combined for flow) */}
+            <Card className="border-none shadow-md">
+              <CardHeader className="pb-4 bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xl">Project Setup</CardTitle>
+                  <CostDisplay
+                    totalTokens={totalTokens()}
+                    estimatedCost={estimatedCost()}
+                    minimal={true}
+                  />
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-6 pt-6">
+                {/* Client Name Input */}
                 <div className="space-y-2">
                   <Label htmlFor="client-name">Client Name</Label>
                   <Input
@@ -388,103 +405,137 @@ export default function WorkspacePage() {
                     value={clientName}
                     onChange={(e) => setClientName(e.target.value)}
                     placeholder="e.g., Acme Corporation"
+                    className="text-lg py-5"
                   />
+                </div>
+
+                {/* Primary Actions */}
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    onClick={handleAutoDetect}
+                    disabled={files.length === 0}
+                    variant="secondary"
+                    className="w-full justify-center h-11"
+                  >
+                    <Search className="w-4 h-4 mr-2" />
+                    Auto-Detect
+                  </Button>
+                  <Button
+                    onClick={handleExtraction}
+                    disabled={!clientName || files.length === 0 || extracting}
+                    className="w-full justify-center h-11 shadow-primary/25"
+                  >
+                    {extracting ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4 mr-2" />
+                    )}
+                    {extracting ? "Extracting..." : "Start Extraction"}
+                  </Button>
+                </div>
+
+                {/* Settings Collapsible (Simplification) */}
+                <div className="pt-2 border-t">
+                  <SettingsPanel settings={settings} onUpdate={updateSettings} />
                 </div>
               </CardContent>
             </Card>
 
-            {/* File Upload */}
-            <FileUploadZone
-              onFilesSelected={handleFileUpload}
-              uploading={uploading}
-              disabled={uploading}
-            />
+            {/* 2. Documents Section */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-1">
+                <h2 className="text-lg font-semibold tracking-tight">Documents & Rules</h2>
+              </div>
 
-            {/* File List */}
-            <FileList
-              files={files}
-              subtypes={subtypes}
-              selectedFileId={selectedFileId}
-              onSelectFile={setSelectedFile}
-              onUpdateFile={updateFile}
-              onDeleteFile={handleDeleteFile}
-            />
+              <FileUploadZone
+                onFilesSelected={handleFileUpload}
+                uploading={uploading}
+                disabled={uploading}
+              />
 
-            {/* Categories */}
-            <SubtypeManager
-              subtypes={subtypes}
-              onAddSubtype={addSubtype}
-              onRemoveSubtype={removeSubtype}
-              disabled={extracting}
-            />
+              <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+                <FileList
+                  files={files}
+                  subtypes={subtypes}
+                  selectedFileId={selectedFileId}
+                  onSelectFile={setSelectedFile}
+                  onUpdateFile={updateFile}
+                  onDeleteFile={handleDeleteFile}
+                  compact={true}
+                />
+              </div>
+
+              {/* Configuration / Subtypes */}
+              <Card className="bg-muted/30 border-dashed">
+                <CardContent className="pt-6">
+                  <SubtypeManager
+                    subtypes={subtypes}
+                    onAddSubtype={addSubtype}
+                    onRemoveSubtype={removeSubtype}
+                    disabled={extracting}
+                  />
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
-          {/* Right Panel (1 column) */}
-          <div className="space-y-6">
-            {/* Actions Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <SettingsPanel settings={settings} onUpdate={updateSettings} />
-                <Button
-                  onClick={handleAutoDetect}
-                  disabled={files.length === 0}
-                  variant="secondary"
-                  className="w-full justify-start"
-                >
-                  <Search className="w-4 h-4 mr-2" />
-                  Auto-Detect Languages
-                </Button>
-                <Button
-                  onClick={handleExtraction}
-                  disabled={!clientName || files.length === 0 || extracting}
-                  className="w-full justify-start"
-                >
-                  {extracting ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Sparkles className="w-4 h-4 mr-2" />
-                  )}
-                  {extracting ? "Extracting..." : "Start Extraction"}
-                </Button>
-              </CardContent>
-            </Card>
+          {/* RIGHT COLUMN: Viewer (Preview & Results) - Spans 7 columns */}
+          <div className="lg:col-span-7 space-y-6 lg:sticky lg:top-8 h-fit">
 
-            {/* Cost Display */}
-            <CostDisplay
-              totalTokens={totalTokens()}
-              estimatedCost={estimatedCost()}
-            />
+            {/* Main Viewer Card */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-1">
+                <h2 className="text-lg font-semibold tracking-tight">
+                  {selectedFile ? `Preview: ${selectedFile.filename}` : "Workspace Viewer"}
+                </h2>
+                {results && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    Results Ready
+                  </span>
+                )}
+              </div>
 
-            {/* File Preview */}
-            <FilePreview file={selectedFile} />
-
-            {/* Results Available */}
-            {results && (
-              <Card className="border-green-200 bg-green-50 dark:bg-green-900/10 animate-in slide-in-from-bottom-4 duration-500">
-                <CardContent className="pt-6">
-                  <div className="text-center space-y-3">
-                    <div className="text-2xl animate-in zoom-in duration-500 delay-100">✨</div>
-                    <div>
-                      <div className="font-semibold text-green-900 dark:text-green-100">
-                        Extraction Complete!
-                      </div>
-                      <div className="text-sm text-green-700 dark:text-green-300 mt-1">
-                        {Object.keys(results).length} {Object.keys(results).length === 1 ? "category" : "categories"} processed
-                      </div>
-                    </div>
+              {/* Large Preview Area */}
+              <div className="min-h-[600px] h-[calc(100vh-12rem)] rounded-xl border bg-background shadow-sm overflow-hidden relative group">
+                {/* Results Overlay Alert */}
+                {results && !showResults && (
+                  <div className="absolute top-4 right-4 z-10 w-auto">
                     <Button
                       onClick={() => setShowResults(true)}
-                      className="w-full"
+                      className="shadow-lg animate-in slide-in-from-top-2"
                     >
-                      View Results
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      View Extraction Results
                     </Button>
                   </div>
+                )}
+
+                <FilePreview file={selectedFile} className="h-full w-full" />
+              </div>
+            </div>
+
+            {/* Success State (if results are ready but dialog closed) */}
+            {results && (
+              <Card className="border-primary/20 bg-primary/5 animate-in slide-in-from-bottom-4 duration-500">
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                      <Sparkles className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <div className="font-medium text-foreground">Extraction Complete</div>
+                      <div className="text-sm text-muted-foreground">
+                        {Object.keys(results).length} categories processed successfully
+                      </div>
+                    </div>
+                  </div>
+                  <Button onClick={() => setShowResults(true)}>
+                    Open Report
+                  </Button>
                 </CardContent>
               </Card>
             )}
+
           </div>
         </div>
       </div>
@@ -505,3 +556,4 @@ export default function WorkspacePage() {
     </div>
   );
 }
+// End of component

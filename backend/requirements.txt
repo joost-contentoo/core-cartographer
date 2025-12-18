@@ -1,15 +1,15 @@
 # Existing core dependencies
-anthropic>=0.40.0
+anthropic>=0.75.0
 python-dotenv>=1.0.0
-python-docx>=1.1.0
-pypdf>=4.0.0
-tiktoken>=0.8.0
-pydantic>=2.0.0
-pydantic-settings>=2.0.0
+python-docx>=1.2.0
+pypdf>=6.4.2
+tiktoken>=0.12.0
+pydantic>=2.12.5
+pydantic-settings>=2.12.0
 langdetect>=1.0.9
 
 # NEW: FastAPI dependencies
-fastapi>=0.109.0
-uvicorn[standard]>=0.27.0
+fastapi>=0.125.0
+uvicorn[standard]>=0.38.0
 python-multipart>=0.0.6
 sse-starlette>=1.8.0
