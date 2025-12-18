@@ -17,7 +17,7 @@ from contextlib import contextmanager
 logger = logging.getLogger(__name__)
 
 CACHE_DIR = Path(os.environ.get("CACHE_DIR", "./temp_cache"))
-CACHE_EXPIRY_HOURS = 1
+CACHE_EXPIRY_HOURS = int(os.environ.get("CACHE_EXPIRY_HOURS", "1"))
 
 
 @dataclass
@@ -125,29 +125,66 @@ class FileCache:
         cutoff = datetime.utcnow() - timedelta(hours=CACHE_EXPIRY_HOURS)
         cleaned = 0
         errors = 0
+        skipped = 0
 
         for path in CACHE_DIR.glob("*.json"):
+            # Skip lock files
+            if path.suffix == '.lock':
+                continue
+
+            lock_path = path.with_suffix('.lock')
+            lock_file = None
+
             try:
+                # Try non-blocking lock to avoid waiting on files in use
+                lock_file = open(lock_path, 'w')
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+                # Check if file still exists after acquiring lock
+                if not path.exists():
+                    continue
+
                 data = json.loads(path.read_text())
                 created = datetime.fromisoformat(data["created_at"])
                 if created < cutoff:
                     path.unlink()
                     cleaned += 1
+
+            except BlockingIOError:
+                # File is in use, skip it
+                skipped += 1
             except json.JSONDecodeError as e:
                 logger.warning(f"Malformed JSON in cache file {path}: {e}")
                 # Delete malformed files
-                path.unlink()
-                errors += 1
+                try:
+                    path.unlink()
+                    errors += 1
+                except FileNotFoundError:
+                    pass
             except KeyError as e:
                 logger.warning(f"Missing field in cache file {path}: {e}")
-                path.unlink()
-                errors += 1
+                try:
+                    path.unlink()
+                    errors += 1
+                except FileNotFoundError:
+                    pass
+            except FileNotFoundError:
+                # File was deleted between glob and processing
+                pass
             except Exception as e:
                 logger.error(f"Unexpected error cleaning {path}: {e}")
                 errors += 1
+            finally:
+                if lock_file:
+                    try:
+                        fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+                        lock_file.close()
+                        lock_path.unlink()
+                    except (OSError, FileNotFoundError):
+                        pass
 
-        if cleaned > 0 or errors > 0:
-            logger.info(f"Cache cleanup: removed {cleaned} expired, {errors} malformed")
+        if cleaned > 0 or errors > 0 or skipped > 0:
+            logger.info(f"Cache cleanup: removed {cleaned} expired, {errors} malformed, {skipped} skipped (in use)")
 
 
 # Singleton instance

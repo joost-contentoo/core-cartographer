@@ -4,11 +4,7 @@ from fastapi import APIRouter, UploadFile
 from typing import List
 import tempfile
 from pathlib import Path
-import sys
 import logging
-
-# Add parent directory to path to import core_cartographer
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
 
 from core_cartographer.parser import parse_document
 from core_cartographer.cost_estimator import count_tokens

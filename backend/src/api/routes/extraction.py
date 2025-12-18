@@ -5,11 +5,6 @@ from fastapi.responses import StreamingResponse
 from typing import List
 import json
 import asyncio
-import sys
-from pathlib import Path
-
-# Add parent directory to path to import core_cartographer
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
 
 from core_cartographer.extractor import extract_rules_and_guidelines
 from core_cartographer.models import Document, DocumentSet

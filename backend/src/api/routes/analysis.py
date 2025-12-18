@@ -2,11 +2,6 @@
 
 from fastapi import APIRouter
 from typing import List
-import sys
-from pathlib import Path
-
-# Add parent directory to path to import core_cartographer
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
 
 from core_cartographer.file_utils import detect_language, find_translation_pair, find_base_name
 from ...cache.file_cache import file_cache

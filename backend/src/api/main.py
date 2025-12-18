@@ -2,6 +2,32 @@
 Main FastAPI application with CORS, lifecycle management, and route configuration.
 """
 
+import os
+import sys
+import logging
+from pathlib import Path
+
+# Configure Python path for core_cartographer imports
+# This handles both local development and Docker production environments
+def _configure_python_path():
+    """Add core_cartographer to Python path based on environment."""
+    possible_paths = [
+        Path("/app"),  # Docker production
+        Path(__file__).parent.parent.parent.parent.parent / "src",  # Local dev (relative to this file)
+        Path.cwd() / "src",  # Local dev (relative to cwd)
+        Path.cwd().parent / "src",  # Running from backend/
+    ]
+
+    for base_path in possible_paths:
+        if (base_path / "core_cartographer").exists():
+            if str(base_path) not in sys.path:
+                sys.path.insert(0, str(base_path))
+            return
+
+    logging.warning("Could not find core_cartographer package in expected locations")
+
+_configure_python_path()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -10,6 +36,44 @@ import asyncio
 from .routes import files, analysis, extraction
 from ..cache.file_cache import file_cache
 
+logger = logging.getLogger(__name__)
+
+
+def _get_cors_origins() -> list[str]:
+    """
+    Get CORS origins from environment variable or use defaults.
+
+    Set CORS_ORIGINS env var as comma-separated list for production:
+    CORS_ORIGINS=https://myapp.com,https://www.myapp.com
+    """
+    cors_env = os.environ.get("CORS_ORIGINS", "")
+    if cors_env:
+        return [origin.strip() for origin in cors_env.split(",") if origin.strip()]
+    # Default origins for development
+    return [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+
+
+def _validate_api_key():
+    """
+    Validate that ANTHROPIC_API_KEY is set.
+    Logs a warning but doesn't fail - allows health checks to work.
+    """
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        logger.warning(
+            "ANTHROPIC_API_KEY not set. Extraction endpoints will fail. "
+            "Set the environment variable to enable Claude API calls."
+        )
+        return False
+    if len(api_key) < 20:
+        logger.warning("ANTHROPIC_API_KEY appears invalid (too short).")
+        return False
+    logger.info("ANTHROPIC_API_KEY validated successfully.")
+    return True
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -17,7 +81,10 @@ async def lifespan(app: FastAPI):
     Application lifespan manager.
     Handles startup and shutdown tasks including cache cleanup.
     """
-    # Startup: clean expired cache
+    # Startup validation
+    _validate_api_key()
+
+    # Clean expired cache
     file_cache.cleanup_expired()
 
     # Background task to clean cache every 30 minutes
@@ -45,16 +112,15 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS configuration
-# Note: Different URLs for browser vs container access
+# CORS configuration from environment or defaults
+cors_origins = _get_cors_origins()
+logger.info(f"CORS origins configured: {cors_origins}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",      # Development: Browser requests
-        "http://frontend:3000",       # Docker: Container hostname (not typically needed)
-    ],
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 

@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useProjectStore } from "@/lib/store";
 import { api } from "@/lib/api";
 import { isSupportedFileType } from "@/lib/utils";
-import type { SSEEvent } from "@/lib/api";
+import type { SSEEvent, ExtractionResult } from "@/lib/types";
 import {
   FileUploadZone,
   FileList,
@@ -182,14 +182,16 @@ export default function WorkspacePage() {
             break;
 
           case "subtype_complete":
+            // Use getState() to avoid stale closure issue with rapid SSE events
+            const currentState = useProjectStore.getState();
             setExtractionProgress({
-              completedSubtypes: [...extraction.completedSubtypes, event.subtype || ""],
+              completedSubtypes: [...currentState.extraction.completedSubtypes, event.subtype || ""],
             });
             break;
 
           case "complete":
             if (event.results) {
-              const convertedResults: Record<string, any> = {};
+              const convertedResults: Record<string, ExtractionResult> = {};
               Object.entries(event.results).forEach(([subtype, result]) => {
                 convertedResults[subtype] = {
                   clientRules: result.client_rules,
@@ -243,7 +245,6 @@ export default function WorkspacePage() {
     files,
     subtypes,
     settings,
-    extraction.completedSubtypes,
     setExtractionProgress,
     setResults,
   ]);
@@ -262,14 +263,41 @@ export default function WorkspacePage() {
     }
   }, [cancelExtraction, setExtractionProgress]);
 
+  // File deletion handler - removes from both frontend and backend
+  const handleDeleteFile = useCallback(
+    async (fileId: string) => {
+      try {
+        // Remove from backend cache first
+        await api.deleteFile(fileId);
+      } catch (err) {
+        // Log but don't block UI - file might already be expired from cache
+        console.warn("Failed to delete file from backend cache:", err);
+      }
+      // Always remove from frontend store
+      removeFile(fileId);
+      if (selectedFileId === fileId) {
+        setSelectedFile(null);
+      }
+    },
+    [removeFile, selectedFileId, setSelectedFile]
+  );
+
+  // SSE cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      if (cancelExtraction) {
+        cancelExtraction();
+      }
+    };
+  }, [cancelExtraction]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Delete key: Delete selected file
       if (e.key === "Delete" && selectedFileId && !extracting) {
         e.preventDefault();
-        removeFile(selectedFileId);
-        setSelectedFile(null);
+        handleDeleteFile(selectedFileId);
       }
 
       // Enter key: Start extraction (if not already extracting and conditions are met)
@@ -291,7 +319,7 @@ export default function WorkspacePage() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedFileId, extracting, clientName, files.length, removeFile, setSelectedFile, handleExtraction]);
+  }, [selectedFileId, extracting, clientName, files.length, handleDeleteFile, handleExtraction]);
 
   const selectedFile = files.find((f) => f.fileId === selectedFileId) || null;
 
@@ -379,7 +407,7 @@ export default function WorkspacePage() {
               selectedFileId={selectedFileId}
               onSelectFile={setSelectedFile}
               onUpdateFile={updateFile}
-              onDeleteFile={removeFile}
+              onDeleteFile={handleDeleteFile}
             />
 
             {/* Categories */}

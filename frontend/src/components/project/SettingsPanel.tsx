@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Settings as SettingsIcon } from "lucide-react";
-import { Settings } from "@/lib/types";
+import { Settings, AVAILABLE_MODELS } from "@/lib/types";
 import {
   Dialog,
   DialogContent,
@@ -35,11 +35,8 @@ export function SettingsPanel({ settings, onUpdate }: SettingsPanelProps) {
     setOpen(false);
   };
 
-  const models = [
-    { value: "claude-opus-4-5-20251101", label: "Claude Opus 4.5 (Recommended)" },
-    { value: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
-    { value: "claude-3-5-sonnet-20241022", label: "Claude 3.5 Sonnet" },
-  ];
+  // Use centralized model list from types.ts
+  const models = AVAILABLE_MODELS;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

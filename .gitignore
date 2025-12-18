@@ -77,3 +77,9 @@ frontend/.env.local
 
 # Migration: Backend venv
 backend/venv/
+
+# SSL certificates (keep .gitkeep)
+nginx/ssl/*.pem
+nginx/ssl/*.key
+nginx/ssl/*.crt
+!nginx/ssl/.gitkeep
