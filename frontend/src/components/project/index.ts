@@ -5,3 +5,4 @@ export { SubtypeManager } from "./SubtypeManager";
 export { CostDisplay } from "./CostDisplay";
 export { ExtractionProgress } from "./ExtractionProgress";
 export { FilePreview } from "./FilePreview";
+export { SettingsPanel } from "./SettingsPanel";

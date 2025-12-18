@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useProjectStore } from "@/lib/store";
 import { api } from "@/lib/api";
 import { isSupportedFileType } from "@/lib/utils";
@@ -12,7 +12,9 @@ import {
   CostDisplay,
   ExtractionProgress,
   FilePreview,
+  SettingsPanel,
 } from "@/components/project";
+import { ResultsDialog } from "@/components/results";
 import {
   Button,
   Card,
@@ -39,6 +41,7 @@ export default function WorkspacePage() {
     addSubtype,
     removeSubtype,
     settings,
+    updateSettings,
     extraction,
     setExtractionProgress,
     setResults,
@@ -49,20 +52,26 @@ export default function WorkspacePage() {
 
   const [uploading, setUploading] = useState(false);
   const [extracting, setExtracting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; retry?: () => void } | null>(null);
   const [cancelExtraction, setCancelExtraction] = useState<(() => void) | null>(null);
+  const [showResults, setShowResults] = useState(false);
+  const [lastUploadedFiles, setLastUploadedFiles] = useState<FileList | null>(null);
 
   // File upload handler
   const handleFileUpload = useCallback(
     async (fileList: FileList) => {
       if (!fileList || fileList.length === 0) return;
 
+      setLastUploadedFiles(fileList);
       setUploading(true);
       setError(null);
 
       for (const file of Array.from(fileList)) {
         if (!isSupportedFileType(file.name)) {
-          setError(`Unsupported file type: ${file.name}`);
+          setError({
+            message: `Unsupported file type: ${file.name}`,
+            retry: () => handleFileUpload(fileList),
+          });
           continue;
         }
 
@@ -81,10 +90,16 @@ export default function WorkspacePage() {
               status: "ready",
             });
           } else {
-            setError(result.error || "Failed to parse file");
+            setError({
+              message: result.error || "Failed to parse file",
+              retry: () => handleFileUpload(fileList),
+            });
           }
         } catch (err) {
-          setError(err instanceof Error ? err.message : "Upload failed");
+          setError({
+            message: err instanceof Error ? err.message : "Upload failed",
+            retry: () => handleFileUpload(fileList),
+          });
         }
       }
 
@@ -108,14 +123,19 @@ export default function WorkspacePage() {
         });
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Auto-detect failed");
+      setError({
+        message: err instanceof Error ? err.message : "Auto-detect failed",
+        retry: handleAutoDetect,
+      });
     }
   }, [files, updateFile]);
 
   // Extraction handler
   const handleExtraction = useCallback(async () => {
     if (!clientName || files.length === 0) {
-      setError("Please provide a client name and upload files");
+      setError({
+        message: "Please provide a client name and upload files",
+      });
       return;
     }
 
@@ -179,6 +199,7 @@ export default function WorkspacePage() {
                 };
               });
               setResults(convertedResults);
+              setShowResults(true); // Open results dialog
             }
             setExtractionProgress({
               status: "complete",
@@ -189,7 +210,10 @@ export default function WorkspacePage() {
             break;
 
           case "error":
-            setError(event.message || "Extraction failed");
+            setError({
+              message: event.message || "Extraction failed",
+              retry: handleExtraction,
+            });
             setExtractionProgress({
               status: "error",
               error: event.message,
@@ -200,7 +224,10 @@ export default function WorkspacePage() {
         }
       },
       (err: Error) => {
-        setError(err.message);
+        setError({
+          message: err.message,
+          retry: handleExtraction,
+        });
         setExtractionProgress({
           status: "error",
           error: err.message,
@@ -235,6 +262,37 @@ export default function WorkspacePage() {
     }
   }, [cancelExtraction, setExtractionProgress]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Delete key: Delete selected file
+      if (e.key === "Delete" && selectedFileId && !extracting) {
+        e.preventDefault();
+        removeFile(selectedFileId);
+        setSelectedFile(null);
+      }
+
+      // Enter key: Start extraction (if not already extracting and conditions are met)
+      if (
+        e.key === "Enter" &&
+        !e.shiftKey &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        clientName &&
+        files.length > 0 &&
+        !extracting &&
+        // Don't trigger if user is typing in an input
+        !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)
+      ) {
+        e.preventDefault();
+        handleExtraction();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedFileId, extracting, clientName, files.length, removeFile, setSelectedFile, handleExtraction]);
+
   const selectedFile = files.find((f) => f.fileId === selectedFileId) || null;
 
   return (
@@ -252,20 +310,34 @@ export default function WorkspacePage() {
 
         {/* Error Banner */}
         {error && (
-          <Card className="mb-6 border-destructive bg-destructive/10">
+          <Card className="mb-6 border-destructive bg-destructive/10 animate-in slide-in-from-top-2 duration-300">
             <CardContent className="pt-6">
               <div className="flex items-start gap-3">
                 <span className="text-destructive text-lg">⚠️</span>
                 <div className="flex-1">
-                  <p className="text-destructive font-medium">{error}</p>
+                  <p className="text-destructive font-medium">{error.message}</p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setError(null)}
-                >
-                  ✕
-                </Button>
+                <div className="flex gap-2">
+                  {error.retry && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        setError(null);
+                        error.retry?.();
+                      }}
+                    >
+                      Retry
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setError(null)}
+                  >
+                    ✕
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -327,6 +399,7 @@ export default function WorkspacePage() {
                 <CardTitle className="text-xl">Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                <SettingsPanel settings={settings} onUpdate={updateSettings} />
                 <Button
                   onClick={handleAutoDetect}
                   disabled={files.length === 0}
@@ -360,44 +433,26 @@ export default function WorkspacePage() {
             {/* File Preview */}
             <FilePreview file={selectedFile} />
 
-            {/* Results */}
+            {/* Results Available */}
             {results && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl">Results Ready!</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {Object.entries(results).map(([subtype, result]) => (
-                      <details key={subtype} className="group">
-                        <summary className="cursor-pointer p-3 bg-primary-100 rounded-lg hover:bg-primary-200 transition-colors">
-                          <div className="font-medium text-primary-900">
-                            {subtype}
-                          </div>
-                          <div className="text-sm text-primary-700">
-                            {result.inputTokens + result.outputTokens} tokens
-                          </div>
-                        </summary>
-                        <div className="mt-2 p-3 bg-muted rounded-lg space-y-2">
-                          <details>
-                            <summary className="cursor-pointer font-medium text-sm">
-                              Client Rules
-                            </summary>
-                            <pre className="mt-2 text-xs overflow-auto max-h-40 p-2 bg-background rounded">
-                              {result.clientRules}
-                            </pre>
-                          </details>
-                          <details>
-                            <summary className="cursor-pointer font-medium text-sm">
-                              Guidelines
-                            </summary>
-                            <pre className="mt-2 text-xs overflow-auto max-h-40 p-2 bg-background rounded">
-                              {result.guidelines}
-                            </pre>
-                          </details>
-                        </div>
-                      </details>
-                    ))}
+              <Card className="border-green-200 bg-green-50 dark:bg-green-900/10 animate-in slide-in-from-bottom-4 duration-500">
+                <CardContent className="pt-6">
+                  <div className="text-center space-y-3">
+                    <div className="text-2xl animate-in zoom-in duration-500 delay-100">✨</div>
+                    <div>
+                      <div className="font-semibold text-green-900 dark:text-green-100">
+                        Extraction Complete!
+                      </div>
+                      <div className="text-sm text-green-700 dark:text-green-300 mt-1">
+                        {Object.keys(results).length} {Object.keys(results).length === 1 ? "category" : "categories"} processed
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => setShowResults(true)}
+                      className="w-full"
+                    >
+                      View Results
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -411,6 +466,13 @@ export default function WorkspacePage() {
         progress={extraction}
         subtypes={subtypes}
         onCancel={extracting ? handleCancelExtraction : undefined}
+      />
+
+      {/* Results Dialog */}
+      <ResultsDialog
+        results={results}
+        open={showResults}
+        onOpenChange={setShowResults}
       />
     </div>
   );

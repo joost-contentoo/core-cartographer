@@ -1,232 +1,591 @@
 # Core Cartographer
 
-Extract **validation rules** and **localization guidelines** from copy documents using Claude Opus 4.5.
+**Modern, Fast, Reliable** ✨
+
+Extract **validation rules** and **localization guidelines** from documentation using Claude AI.
+
+<img src="https://img.shields.io/badge/Next.js-14-black" alt="Next.js 14" />
+<img src="https://img.shields.io/badge/FastAPI-0.115-009688" alt="FastAPI 0.115" />
+<img src="https://img.shields.io/badge/Claude-Opus_4.5-7C3AED" alt="Claude Opus 4.5" />
+<img src="https://img.shields.io/badge/TypeScript-5.x-3178C6" alt="TypeScript 5" />
+
+---
 
 ## What It Does
 
-Core Cartographer analyzes collections of localized copy (e.g., product pages, marketing content) and reverse-engineers the implicit rules and style patterns into two outputs:
+Core Cartographer analyzes your localization documentation (style guides, brand docs, translation memories) and automatically extracts:
 
-1. **`client_rules.js`** - Machine-readable validation config for automated content checking
-2. **`guidelines.md`** - Human-readable localization guidance for writers and translators
+1. **Client Rules (JavaScript)** - Machine-readable validation config for automated content checking
+2. **Guidelines (Markdown)** - Human-readable style guides for translators and writers
 
-This enables you to:
-- Codify tribal knowledge from existing high-quality content
-- Ensure consistency across new content with automated validation
-- Onboard new translators with comprehensive style guides
-- Maintain separate rules/guidelines per client and content type
+**Key Benefits:**
+- ✅ **AI-Powered Analysis** - Claude Opus 4.5 identifies patterns and rules
+- ✅ **Multi-Language Support** - Automatic language detection and translation pairing
+- ✅ **Category-Based Organization** - Separate rules for technical, legal, marketing content
+- ✅ **Real-Time Feedback** - Live cost estimation and progress tracking
+- ✅ **Modern UI** - Beautiful, responsive interface built with Next.js
 
-## Example Output
+---
 
-### Client Rules (JavaScript)
-```javascript
-const client_rules = {
-  client: "acme",
-  locale: "de",
-
-  forbidden_words: ["Sie", "Ihnen", "Ihr"],  // Using informal "du"
-
-  terminology: [
-    { en: "gift card", de: "Gutschein", context: "product term" },
-    { en: "redeem", de: "einlösen", context: "action verb" }
-  ],
-
-  patterns: {
-    currency: {
-      invalid_patterns: ["\\d+€", "€\\d+"],
-      valid_format: "X €",
-      fix_message: "Use: number + space + euro sign"
-    }
-  }
-};
-```
-
-### Guidelines (Markdown)
-```markdown
-# ACME German Localization Guidelines
-
-## Brand Voice
-ACME speaks to German customers as a knowledgeable friend...
-
-## Writing Style
-Use informal "du" throughout. Never mix with "Sie"...
-```
-
-## Project Structure
+## Architecture
 
 ```
-core-cartographer/
-├── input/                          # Client documents to analyze
-│   └── [client_name]/
-│       └── [subtype]/              # e.g., gift_cards, payment_cards
-│           ├── document1.pdf
-│           └── document2.docx
-├── output/                         # Generated rules and guidelines
-│   └── [client_name]/
-│       └── [subtype]/
-│           ├── client_rules.js     # Machine-readable validation config
-│           └── guidelines.md       # Human-readable guidance
-├── templates/                      # Example outputs for Claude to follow
-│   ├── client_rules_example.js
-│   └── guidelines_example.md
-├── instructions/                   # Extraction instructions for Claude
-│   └── extraction_instructions.md
-└── src/core_cartographer/          # Python source code
+┌─────────────────────────────────────────────────────────────────────┐
+│                        FRONTEND (Next.js 14)                        │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐          │
+│  │ File Upload  │───▶│   Zustand    │───▶│  React UI    │          │
+│  │  Components  │    │    Store     │    │  Components  │          │
+│  └──────────────┘    │  (metadata)  │    └──────────────┘          │
+│                      └──────┬───────┘                               │
+└─────────────────────────────┼──────────────────────────────────────┘
+                              │ REST API + SSE
+                              ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                        BACKEND (FastAPI)                            │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐          │
+│  │   API Routes │───▶│  File Cache  │───▶│    Python    │          │
+│  │   /files     │    │   (temp)     │    │     Core     │          │
+│  │   /analysis  │    └──────────────┘    │  extractor   │          │
+│  │   /extraction│                         │   parser     │          │
+│  └──────────────┘                         └──────────────┘          │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-## Installation
+**Key Features:**
+- **Stateless Architecture** - No database required, refresh clears state
+- **Backend File Caching** - Efficient handling of large documents
+- **SSE Streaming** - Real-time extraction progress updates
+- **Metadata-Only Frontend** - Fast, responsive UI with minimal memory footprint
+
+---
+
+## Quick Start
 
 ### Prerequisites
-- Python 3.11+
-- Anthropic API key
 
-### Setup
+- **Python 3.11+**
+- **Node.js 18+**
+- **npm or yarn**
+- **Anthropic API key** ([Get one here](https://console.anthropic.com/))
+
+### Installation
+
+#### 1. Clone Repository
 
 ```bash
-# Clone and enter directory
 git clone https://github.com/yourusername/core-cartographer.git
 cd core-cartographer
+```
+
+#### 2. Setup Backend
+
+```bash
+# Navigate to backend
+cd backend
 
 # Create virtual environment
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
-# Install
-pip install -e .
+# Install dependencies
+pip install -r requirements.txt
 
-# Configure API key
+# Configure environment
 cp .env.example .env
 # Edit .env and add your ANTHROPIC_API_KEY
 ```
 
+#### 3. Setup Frontend
+
+```bash
+# Navigate to frontend
+cd ../frontend
+
+# Install dependencies
+npm install
+# or: yarn install
+
+# Configure environment (optional)
+cp .env.example .env.local
+```
+
+### Running the Application
+
+#### Option 1: Using Startup Scripts (Recommended)
+
+```bash
+# From project root
+./start-backend.sh   # Terminal 1
+./start-frontend.sh  # Terminal 2
+```
+
+Then open `http://localhost:3000` in your browser.
+
+#### Option 2: Manual Startup
+
+**Terminal 1 - Backend:**
+```bash
+cd backend
+source .venv/bin/activate
+uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**Terminal 2 - Frontend:**
+```bash
+cd frontend
+npm run dev
+```
+
+#### Option 3: Docker Compose (Coming Soon)
+
+```bash
+docker-compose up
+```
+
+---
+
 ## Usage
 
-### GUI (Recommended)
+### Step-by-Step Workflow
 
-```bash
-streamlit run src/core_cartographer/gui.py
-# or
-cartographer-gui
+1. **Enter Client Name**
+   - Type your client's name in the input field
+   - This name appears in the extracted guidelines
+
+2. **Upload Documentation Files**
+   - Click or drag & drop files into the upload zone
+   - Supported formats: PDF, DOCX, TXT, MD
+   - Max file size: 10MB
+
+3. **Auto-Detect Languages** (Optional)
+   - Click "Auto-Detect Languages" button
+   - Identifies file languages (EN, DE, FR, etc.)
+   - Automatically pairs translation files
+
+4. **Organize by Category** (Optional)
+   - Add custom categories: "technical", "legal", "marketing"
+   - Assign files to categories via dropdown
+   - Each category produces separate output
+
+5. **Configure Settings** (Optional)
+   - Click "Settings" button
+   - Choose processing mode (Batch/Individual)
+   - Select AI model (Opus 4.5, Sonnet 4, etc.)
+   - Enable debug mode if needed
+
+6. **Start Extraction**
+   - Click "Start Extraction" button (or press Enter)
+   - Watch real-time progress
+   - Cancel anytime if needed
+
+7. **Review Results**
+   - Results dialog opens automatically
+   - Switch between categories (if multiple)
+   - View Client Rules (syntax-highlighted JS)
+   - View Guidelines (rendered Markdown)
+   - Download individual files or all at once
+
+### Example Output
+
+**Client Rules (`technical_client_rules.js`):**
+```javascript
+const clientRules = {
+  terminology: {
+    translate: ["user", "settings", "dashboard"],
+    doNotTranslate: ["API", "OAuth", "Acme Corp"],
+  },
+  formatting: {
+    dates: "DD/MM/YYYY",
+    numbers: "1.234,56",
+    currency: "€",
+  },
+  style: {
+    formality: "formal",
+    tone: "professional",
+    person: "second",
+  },
+};
 ```
 
-**Streamlit GUI features:**
-- 🖱️ Drag & drop file uploads
-- 💰 Real-time cost estimates
-- 📊 Visual document summaries
-- 🎨 Syntax-highlighted previews
-- ⬇️ One-click downloads
+**Guidelines (`technical_guidelines.md`):**
+```markdown
+# Acme Corporation - Technical Documentation Guidelines
 
-See [GUI_QUICKSTART.md](GUI_QUICKSTART.md) for details.
+## Overview
+Guidelines for translating Acme's technical documentation and API references.
 
-### CLI (Alternative)
+## Target Audience
+- Software developers
+- Technical integrators
+- IT administrators
 
-```bash
-cartographer
+## Tone and Style
+- **Formality:** Formal, professional tone
+- **Person:** Second person ("you")
+- **Voice:** Active voice preferred
+
+## Terminology
+- **API:** Do not translate (keep as "API")
+- **Dashboard:** Translate (e.g., "Tableau de bord" in French)
 ```
 
-The interactive CLI guides you through:
+---
 
-1. **Select client** - Choose from available client folders
-2. **Select subtypes** - Process all or specific document types
-3. **Review costs** - See estimated token usage and API costs
-4. **Extract** - Claude analyzes documents and generates outputs
-5. **Preview & confirm** - Review before saving
+## Features
 
-### Example Session
+### File Management
+- ✅ Drag & drop or click to upload
+- ✅ Preview file content (first 500 chars)
+- ✅ Delete files individually
+- ✅ Auto-detect file languages
+- ✅ Automatic translation pairing
+
+### Category Organization
+- ✅ Create custom categories
+- ✅ Assign files to categories
+- ✅ Separate output per category
+- ✅ Visual category badges
+
+### Extraction Settings
+- ✅ **Batch Mode** - Single API call (faster, cheaper)
+- ✅ **Individual Mode** - Separate calls per category
+- ✅ **Model Selection** - Opus 4.5, Sonnet 4, Sonnet 3.5
+- ✅ **Debug Mode** - Save prompts without API calls
+
+### Real-Time Feedback
+- ✅ Live cost estimation
+- ✅ Token count tracking
+- ✅ SSE streaming progress
+- ✅ Per-category status updates
+- ✅ Cancellable extractions
+
+### Results Display
+- ✅ Syntax-highlighted JavaScript
+- ✅ Rendered Markdown
+- ✅ Download individual files
+- ✅ Bulk download all results
+- ✅ Token usage statistics
+
+### Polish & UX
+- ✅ Error handling with retry
+- ✅ Keyboard shortcuts (Delete, Enter)
+- ✅ Smooth animations & transitions
+- ✅ Enhanced empty states
+- ✅ Responsive design
+
+---
+
+## Keyboard Shortcuts
+
+| Key | Action | Requirements |
+|-----|--------|--------------|
+| **Delete** | Delete selected file | File must be selected |
+| **Enter** | Start extraction | Client name + files uploaded |
+
+---
+
+## Project Structure
 
 ```
-╭──────────────────────────────────────────────────────────────╮
-│ Core Cartographer v0.1.0                                     │
-│ Extract validation rules and localization guidelines         │
-╰──────────────────────────────────────────────────────────────╯
-
-? What would you like to do? Extract rules & guidelines
-? Select a client: dundle
-
-         Documents Found
-┏━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━┓
-┃ Subtype      ┃ Documents ┃ Tokens ┃
-┡━━━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━┩
-│ gift_cards   │        12 │  8.2k  │
-│ game_cards   │         8 │  5.1k  │
-│ payment_cards│        15 │  9.7k  │
-└──────────────┴───────────┴────────┘
-
-? Which subtypes to process? [All subtypes]
-
-Estimated Cost:
-  Input tokens:  38.0k
-  Output tokens: ~19.0k
-  Estimated cost: $2.0250
-
-? Proceed with extraction? Yes
-
-Processing gift_cards...
-✓ Saved: output/dundle/gift_cards/client_rules.js
-✓ Saved: output/dundle/gift_cards/guidelines.md
+core-cartographer/
+├── backend/                    # FastAPI backend
+│   ├── src/
+│   │   ├── api/
+│   │   │   ├── main.py        # FastAPI app
+│   │   │   ├── routes/
+│   │   │   │   ├── files.py   # Upload & parse
+│   │   │   │   ├── analysis.py# Language detection
+│   │   │   │   └── extraction.py # SSE extraction
+│   │   │   └── models/        # Pydantic models
+│   │   ├── cache/             # File caching
+│   │   └── core_cartographer/ # Python core (unchanged)
+│   ├── tests/
+│   ├── Dockerfile
+│   └── requirements.txt
+│
+├── frontend/                   # Next.js frontend
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── layout.tsx     # Root layout
+│   │   │   ├── page.tsx       # Landing page
+│   │   │   └── workspace/     # Main workspace
+│   │   ├── components/
+│   │   │   ├── project/       # File upload, list, etc.
+│   │   │   ├── results/       # Results dialog, viewers
+│   │   │   └── ui/            # Reusable UI components
+│   │   ├── lib/
+│   │   │   ├── api.ts         # Backend API client
+│   │   │   ├── store.ts       # Zustand state
+│   │   │   └── types.ts       # TypeScript types
+│   │   └── styles/
+│   ├── public/
+│   ├── package.json
+│   └── next.config.js
+│
+├── templates/                  # Example outputs for AI
+│   ├── client_rules_example.js
+│   └── guidelines_example.md
+├── instructions/               # Extraction instructions
+│   └── extraction_instructions.md
+│
+├── docs/                       # Documentation
+│   ├── MIGRATION_PLAN_DETAILED.md
+│   ├── USER_GUIDE.md
+│   ├── TEST_MATRIX.md
+│   ├── WEEK_4_COMPLETE.md
+│   └── WEEK_5_COMPLETE.md
+│
+├── .env.example
+├── docker-compose.yml
+├── start-backend.sh
+├── start-frontend.sh
+└── README.md
 ```
 
-## Input Document Formats
-
-| Format | Extension | Notes |
-|--------|-----------|-------|
-| Plain text | `.txt` | Direct processing |
-| Markdown | `.md` | Preserves structure |
-| Word | `.docx` | Text extraction |
-| PDF | `.pdf` | Text extraction (no OCR) |
-
-## Customizing Extraction
-
-### Examples (templates/)
-
-The `templates/` folder contains example outputs that Claude uses as reference:
-- `client_rules_example.js` - Shows the expected JavaScript structure
-- `guidelines_example.md` - Shows the expected Markdown structure
-
-Edit these to match your preferred output format.
-
-### Instructions (instructions/)
-
-`extraction_instructions.md` tells Claude how to analyze documents and what to extract. Customize this to:
-- Add domain-specific extraction rules
-- Adjust the level of detail
-- Add new rule categories
-
-## How It Works
-
-1. **Document Collection**: All documents in a subtype folder are collected
-2. **Holistic Analysis**: Documents are sent to Claude Opus 4.5 together for comprehensive pattern recognition
-3. **Dual Extraction**: Claude generates both machine-readable rules and human-readable guidelines
-4. **Review Flow**: Preview outputs before committing to files
-
-### Why Holistic Analysis?
-
-Claude Opus 4.5's large context window (200k+ tokens) allows analyzing all documents at once. This produces:
-- More consistent terminology extraction
-- Better pattern recognition across documents
-- Identification of inconsistencies in source content
+---
 
 ## Configuration
 
-### Environment Variables (.env)
+### Backend Environment Variables
 
 ```bash
+# .env in backend/
 ANTHROPIC_API_KEY=sk-ant-...    # Required
-INPUT_DIR=./input               # Optional (default: ./input)
-OUTPUT_DIR=./output             # Optional (default: ./output)
-MODEL=claude-opus-4-5-20251101  # Optional (default: opus 4.5)
+MODEL=claude-opus-4-5-20251101  # Optional
+DEBUG_MODE=false                 # Optional
+CACHE_EXPIRY_HOURS=1            # Optional
 ```
 
-## Integration with Code Checker
+### Frontend Environment Variables
 
-The `client_rules.js` output is designed to feed into a separate Code Checker tool that validates new content against the extracted rules. The rules config includes:
+```bash
+# .env.local in frontend/
+NEXT_PUBLIC_API_URL=http://localhost:8000  # Optional (default)
+```
 
-- `forbidden_words` - Terms that trigger validation errors
-- `terminology` - Required translations with context
-- `patterns` - Regex-based formatting rules
-- `lengths` - Character/word limits per content type
-- `keywords` - SEO placement requirements
-- `structure` - Required document elements
+---
+
+## API Documentation
+
+When the backend is running, visit:
+- **Interactive API docs:** `http://localhost:8000/docs`
+- **OpenAPI schema:** `http://localhost:8000/openapi.json`
+
+### Key Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/files/parse` | Upload and parse file |
+| `DELETE` | `/files/{file_id}` | Delete cached file |
+| `POST` | `/analysis/auto-detect` | Detect languages & pairs |
+| `POST` | `/extraction/extract-stream` | Extract rules (SSE) |
+
+---
+
+## Development
+
+### Backend Development
+
+```bash
+cd backend
+source .venv/bin/activate
+
+# Run with auto-reload
+uvicorn src.api.main:app --reload --port 8000
+
+# Run tests
+pytest
+
+# Format code
+black src/
+ruff check src/
+```
+
+### Frontend Development
+
+```bash
+cd frontend
+
+# Run dev server
+npm run dev
+
+# Type checking
+npm run type-check
+
+# Linting
+npm run lint
+
+# Build production
+npm run build
+```
+
+---
+
+## Testing
+
+### Manual Testing
+
+A comprehensive test matrix is available in `TEST_MATRIX.md`:
+- 45 test cases covering all functionality
+- Organized by feature area
+- Includes expected results and notes
+
+### Automated Testing (Coming Soon)
+
+```bash
+# Backend
+cd backend
+pytest
+
+# Frontend
+cd frontend
+npm test
+```
+
+---
+
+## Deployment
+
+### Production Build
+
+**Backend:**
+```bash
+cd backend
+pip install -r requirements.txt
+gunicorn src.api.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker
+```
+
+**Frontend:**
+```bash
+cd frontend
+npm run build
+npm start
+```
+
+### Docker Deployment (Coming Soon)
+
+```bash
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+---
+
+## Documentation
+
+- **[User Guide](USER_GUIDE.md)** - Complete user documentation
+- **[Test Matrix](TEST_MATRIX.md)** - Manual testing checklist
+- **[Migration Plan](MIGRATION_PLAN_DETAILED.md)** - Technical migration details
+- **[Week 4 Complete](WEEK_4_COMPLETE.md)** - Extraction flow implementation
+- **[Week 5 Complete](WEEK_5_COMPLETE.md)** - Polish & error handling
+
+---
+
+## Troubleshooting
+
+### Backend Won't Start
+
+```bash
+# Check Python version
+python --version  # Should be 3.11+
+
+# Verify virtual environment is activated
+which python  # Should point to .venv
+
+# Check dependencies
+pip install -r requirements.txt
+
+# Verify API key
+grep ANTHROPIC_API_KEY backend/.env
+```
+
+### Frontend Won't Start
+
+```bash
+# Check Node version
+node --version  # Should be 18+
+
+# Clear cache and reinstall
+rm -rf node_modules package-lock.json
+npm install
+
+# Check for port conflicts
+lsof -i :3000
+```
+
+### Upload Fails
+
+- ✅ Check file format (PDF, DOCX, TXT, MD only)
+- ✅ Verify file size <10MB
+- ✅ Ensure backend is running
+- ✅ Check CORS configuration
+
+### Extraction Fails
+
+- ✅ Verify `ANTHROPIC_API_KEY` is set
+- ✅ Check API key has credits
+- ✅ Review backend logs for errors
+- ✅ Try with smaller files first
+
+---
+
+## Contributing
+
+Contributions welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## Roadmap
+
+### v2.1 (Current)
+- ✅ Next.js + FastAPI migration complete
+- ✅ Full extraction workflow
+- ✅ Real-time progress with SSE
+- ✅ Results display with syntax highlighting
+- ✅ Download functionality
+- ✅ Keyboard shortcuts & animations
+
+### v2.2 (Next)
+- [ ] Automated testing suite
+- [ ] Docker production deployment
+- [ ] Result persistence (optional)
+- [ ] User authentication (optional)
+- [ ] API rate limiting
+
+### v3.0 (Future)
+- [ ] Multi-project support
+- [ ] Version control for rules
+- [ ] Integration with TMS systems
+- [ ] Collaborative editing
+- [ ] Advanced analytics
+
+---
 
 ## License
 
 ISC
+
+---
+
+## Credits
+
+Built with:
+- [Next.js](https://nextjs.org/) - React framework
+- [FastAPI](https://fastapi.tiangolo.com/) - Python web framework
+- [Claude AI](https://www.anthropic.com/) - AI extraction engine
+- [Zustand](https://github.com/pmndrs/zustand) - State management
+- [Tailwind CSS](https://tailwindcss.com/) - Styling
+- [Radix UI](https://www.radix-ui.com/) - Accessible components
+
+Inspired by the portal-localiser design system.
+
+---
+
+**Core Cartographer v2.0** - Modern, Fast, Reliable ✨
+
+For questions or support, please open an issue on GitHub.

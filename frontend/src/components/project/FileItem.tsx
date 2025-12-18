@@ -55,11 +55,11 @@ export function FileItem({
       <div
         onClick={handleClick}
         className={cn(
-          "flex items-center gap-3 p-3 rounded-lg transition-all",
+          "flex items-center gap-3 p-3 rounded-lg transition-all duration-200",
           "border border-transparent",
           isSelected
-            ? "bg-primary-100 dark:bg-primary-900/30 border-primary-300"
-            : "bg-muted hover:bg-muted/80",
+            ? "bg-primary-100 dark:bg-primary-900/30 border-primary-300 shadow-sm scale-[1.01]"
+            : "bg-muted hover:bg-muted/80 hover:shadow-sm",
           onSelect && "cursor-pointer"
         )}
       >

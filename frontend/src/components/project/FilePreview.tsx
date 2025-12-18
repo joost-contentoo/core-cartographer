@@ -20,10 +20,13 @@ export function FilePreview({ file }: FilePreviewProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <FileText className="w-16 h-16 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">
-              Select a file to preview its content
+          <div className="flex flex-col items-center justify-center py-16 text-center animate-in fade-in duration-300">
+            <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4 animate-in zoom-in duration-500 delay-100">
+              <FileText className="w-10 h-10 text-muted-foreground" />
+            </div>
+            <h3 className="font-semibold text-base mb-2 animate-in slide-in-from-bottom-2 duration-500 delay-200">No file selected</h3>
+            <p className="text-sm text-muted-foreground max-w-xs animate-in slide-in-from-bottom-2 duration-500 delay-300">
+              Click on any file in the list above to view its content, language, and token count
             </p>
           </div>
         </CardContent>

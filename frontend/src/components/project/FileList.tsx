@@ -22,10 +22,6 @@ export function FileList({
   onUpdateFile,
   onDeleteFile,
 }: FileListProps) {
-  if (files.length === 0) {
-    return null;
-  }
-
   const handleUpdateSubtype = (fileId: string, subtype: string) => {
     onUpdateFile(fileId, { subtype });
   };
@@ -39,19 +35,31 @@ export function FileList({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
-          {files.map((file) => (
-            <FileItem
-              key={file.fileId}
-              file={file}
-              subtypes={subtypes}
-              isSelected={selectedFileId === file.fileId}
-              onSelect={onSelectFile}
-              onUpdateSubtype={handleUpdateSubtype}
-              onDelete={onDeleteFile}
-            />
-          ))}
-        </div>
+        {files.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center animate-in fade-in duration-300">
+            <div className="w-16 h-16 rounded-full bg-primary-100 flex items-center justify-center mb-4 animate-in zoom-in duration-500 delay-100">
+              <FileText className="w-8 h-8 text-primary-600" />
+            </div>
+            <h3 className="font-semibold text-lg mb-2 animate-in slide-in-from-bottom-2 duration-500 delay-200">No files uploaded yet</h3>
+            <p className="text-sm text-muted-foreground max-w-sm animate-in slide-in-from-bottom-2 duration-500 delay-300">
+              Upload your documentation files above to get started. Supported formats include PDF, DOCX, and TXT.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {files.map((file) => (
+              <FileItem
+                key={file.fileId}
+                file={file}
+                subtypes={subtypes}
+                isSelected={selectedFileId === file.fileId}
+                onSelect={onSelectFile}
+                onUpdateSubtype={handleUpdateSubtype}
+                onDelete={onDeleteFile}
+              />
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
