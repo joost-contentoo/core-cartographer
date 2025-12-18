@@ -1,18 +1,19 @@
 """Extraction endpoints with SSE streaming support."""
 
+import asyncio
+import json
+
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
-from typing import List
-import json
-import asyncio
 
-from core_cartographer.extractor import extract_rules_and_guidelines
-from core_cartographer.models import Document, DocumentSet
 from core_cartographer.config import get_settings
 from core_cartographer.cost_estimator import estimate_cost
+from core_cartographer.extractor import extract_rules_and_guidelines
+from core_cartographer.models import Document, DocumentSet
+
 from ...cache.file_cache import file_cache
+from ..dependencies import handle_anthropic_error, logger
 from ..models.requests import ExtractionRequest
-from ..dependencies import ValidationError, NotFoundError, handle_anthropic_error, logger
 
 router = APIRouter()
 

@@ -1,7 +1,8 @@
 """Response models for API endpoints."""
 
+from typing import Any
+
 from pydantic import BaseModel
-from typing import List, Optional, Dict, Any
 
 
 class FileParseResponse(BaseModel):
@@ -11,7 +12,7 @@ class FileParseResponse(BaseModel):
     tokens: int
     preview: str
     success: bool
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class FileMetadata(BaseModel):
@@ -19,12 +20,12 @@ class FileMetadata(BaseModel):
     file_id: str
     filename: str
     language: str
-    pair_id: Optional[str]
+    pair_id: str | None
 
 
 class AnalysisResponse(BaseModel):
     """Response from auto-detection analysis."""
-    files: List[Dict[str, Any]]
+    files: list[dict[str, Any]]
     paired_count: int
     unpaired_count: int
 
@@ -39,7 +40,7 @@ class ExtractionResult(BaseModel):
 
 class ExtractionResponse(BaseModel):
     """Complete extraction response with all results."""
-    results: Dict[str, ExtractionResult]
+    results: dict[str, ExtractionResult]
     total_input_tokens: int
     total_output_tokens: int
     total_cost: float

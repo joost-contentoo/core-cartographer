@@ -2,10 +2,11 @@
 Main FastAPI application with CORS, lifecycle management, and route configuration.
 """
 
+import logging
 import os
 import sys
-import logging
 from pathlib import Path
+
 
 # Configure Python path for core_cartographer imports
 # This handles both local development and Docker production environments
@@ -13,7 +14,8 @@ def _configure_python_path():
     """Add core_cartographer to Python path based on environment."""
     possible_paths = [
         Path("/app"),  # Docker production
-        Path(__file__).parent.parent.parent.parent.parent / "src",  # Local dev (relative to this file)
+        # Local dev (relative to this file)
+        Path(__file__).parent.parent.parent.parent.parent / "src",
         Path.cwd() / "src",  # Local dev (relative to cwd)
         Path.cwd().parent / "src",  # Running from backend/
     ]
@@ -28,13 +30,16 @@ def _configure_python_path():
 
 _configure_python_path()
 
+# Imports after path configuration (intentional E402)
+# ruff: noqa: E402
+import asyncio
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
-import asyncio
 
-from .routes import files, analysis, extraction
 from ..cache.file_cache import file_cache
+from .routes import analysis, extraction, files
 
 logger = logging.getLogger(__name__)
 

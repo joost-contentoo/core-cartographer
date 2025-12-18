@@ -3,16 +3,15 @@ File cache system for storing parsed document content temporarily.
 Uses file-based storage with automatic cleanup of expired entries.
 """
 
+import fcntl
+import json
+import logging
 import os
 import uuid
-import json
-import fcntl
-import logging
-from pathlib import Path
-from datetime import datetime, timedelta
-from typing import Optional
-from dataclasses import dataclass, asdict
 from contextlib import contextmanager
+from dataclasses import asdict, dataclass
+from datetime import datetime, timedelta
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +83,7 @@ class FileCache:
             path.write_text(json.dumps(asdict(cached)))
         return file_id
 
-    def get(self, file_id: str) -> Optional[CachedFile]:
+    def get(self, file_id: str) -> CachedFile | None:
         """
         Retrieve cached file by ID.
 

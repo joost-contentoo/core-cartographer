@@ -1,16 +1,16 @@
 """File upload and management endpoints."""
 
-from fastapi import APIRouter, UploadFile
-from typing import List
 import tempfile
 from pathlib import Path
-import logging
 
-from core_cartographer.parser import parse_document
+from fastapi import APIRouter, UploadFile
+
 from core_cartographer.cost_estimator import count_tokens
+from core_cartographer.parser import parse_document
+
 from ...cache.file_cache import file_cache
+from ..dependencies import NotFoundError, ProcessingError, ValidationError, logger
 from ..models.responses import FileParseResponse
-from ..dependencies import ValidationError, ProcessingError, NotFoundError, logger
 
 router = APIRouter()
 
@@ -122,8 +122,8 @@ async def delete_file(file_id: str):
     raise NotFoundError(f"File not found: {file_id}")
 
 
-@router.post("/parse-batch", response_model=List[FileParseResponse])
-async def parse_files(files: List[UploadFile]):
+@router.post("/parse-batch", response_model=list[FileParseResponse])
+async def parse_files(files: list[UploadFile]):
     """
     Parse multiple files. Returns list of results (some may have errors).
 

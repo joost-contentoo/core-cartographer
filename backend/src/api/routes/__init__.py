@@ -1,5 +1,5 @@
 """API route modules."""
 
-from . import files, analysis, extraction
+from . import analysis, extraction, files
 
 __all__ = ["files", "analysis", "extraction"]

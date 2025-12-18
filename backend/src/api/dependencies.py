@@ -1,8 +1,8 @@
 """Shared dependencies and utilities for API routes."""
 
-from fastapi import HTTPException, status
-from typing import Optional
 import logging
+
+from fastapi import HTTPException, status
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -16,7 +16,7 @@ class APIError(HTTPException):
         self,
         status_code: int,
         detail: str,
-        error_code: Optional[str] = None,
+        error_code: str | None = None,
         **kwargs
     ):
         super().__init__(status_code=status_code, detail=detail)

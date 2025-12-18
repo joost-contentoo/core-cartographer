@@ -1,13 +1,13 @@
 """File analysis endpoints for language detection and pairing."""
 
 from fastapi import APIRouter
-from typing import List
 
-from core_cartographer.file_utils import detect_language, find_translation_pair, find_base_name
+from core_cartographer.file_utils import detect_language, find_base_name, find_translation_pair
+
 from ...cache.file_cache import file_cache
+from ..dependencies import ProcessingError, ValidationError, logger
 from ..models.requests import AnalysisRequest
 from ..models.responses import AnalysisResponse
-from ..dependencies import ValidationError, ProcessingError, logger
 
 router = APIRouter()
 
