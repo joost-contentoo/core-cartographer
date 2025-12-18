@@ -65,3 +65,15 @@ output/*
 !output/.gitkeep
 debug/*
 !debug/.gitkeep
+
+# Migration: Backend cache
+temp_cache/
+
+# Migration: Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env.local
+
+# Migration: Backend venv
+backend/venv/

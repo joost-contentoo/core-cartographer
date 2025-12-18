@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cartographer-api
+    ports:
+      - "8000:8000"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+    volumes:
+      # Source code (hot reload)
+      - ./backend/src:/app/src
+      # Existing Python package
+      - ./src/core_cartographer:/app/core_cartographer
+      # Templates and instructions
+      - ./templates:/app/templates
+      - ./instructions:/app/instructions
+      # Temp cache (persists across restarts)
+      - cartographer-cache:/app/temp_cache
+    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - cartographer-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cartographer-ui
+    ports:
+      - "3000:3000"
+    environment:
+      # Browser makes requests to localhost, not container hostname
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      # Exclude node_modules from volume mount
+      - /app/node_modules
+    command: npm run dev
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - cartographer-network
+
+volumes:
+  cartographer-cache:
+    driver: local
+
+networks:
+  cartographer-network:
+    driver: bridge
