@@ -14,7 +14,7 @@ import {
   FilePreview,
   SettingsPanel,
 } from "@/components/project";
-import { ResultsDialog } from "@/components/results";
+import { ResultsSection } from "@/components/results";
 import {
   Button,
   Card,
@@ -25,7 +25,7 @@ import {
   Input,
   Label,
 } from "@/components/ui";
-import { Search, Sparkles, Loader2 } from "lucide-react";
+import { Search, Sparkles, Loader2, Map } from "lucide-react";
 
 export default function WorkspacePage() {
   const {
@@ -55,7 +55,6 @@ export default function WorkspacePage() {
   const [detecting, setDetecting] = useState(false);
   const [error, setError] = useState<{ message: string; retry?: () => void } | null>(null);
   const [cancelExtraction, setCancelExtraction] = useState<(() => void) | null>(null);
-  const [showResults, setShowResults] = useState(false);
   const [lastUploadedFiles, setLastUploadedFiles] = useState<FileList | null>(null);
 
   // File upload handler
@@ -205,7 +204,6 @@ export default function WorkspacePage() {
                 };
               });
               setResults(convertedResults);
-              setShowResults(true); // Open results dialog
             }
             setExtractionProgress({
               status: "complete",
@@ -331,20 +329,14 @@ export default function WorkspacePage() {
     <div className="min-h-screen bg-muted/30 p-6 md:p-8">
       <div className="max-w-[1600px] mx-auto space-y-8">
         {/* Header */}
-        <header className="flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-primary">
-            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <span className="font-semibold tracking-tight text-sm uppercase">Core Cartographer</span>
+        <header className="flex items-center gap-4">
+          <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shadow-sm border border-primary/20">
+            <Map className="h-8 w-8 text-primary" strokeWidth={2.5} />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Workspace
+            <h1 className="text-4xl font-bold tracking-tight text-foreground bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+              Core Cartographer
             </h1>
-            <p className="text-muted-foreground text-lg max-w-2xl mt-1">
-              Extract localization rules and guidelines from your project documentation.
-            </p>
           </div>
         </header>
 
@@ -385,18 +377,20 @@ export default function WorkspacePage() {
         )}
 
         {/* Top Bar: Project Setup & Actions */}
-        <Card className="border-none shadow-md">
-          <CardContent className="py-4">
-            <div className="flex flex-wrap items-center gap-4 md:gap-6">
+        <Card className="shadow-sm">
+          <CardContent className="py-4 px-6">
+            <div className="flex flex-wrap items-center gap-3 md:gap-4">
               {/* Client Name Input */}
-              <div className="flex items-center gap-2 flex-1 min-w-[200px] max-w-[300px]">
-                <Label htmlFor="client-name" className="text-sm whitespace-nowrap">Client</Label>
+              <div className="flex items-center gap-2.5 flex-1 min-w-[220px] max-w-[320px]">
+                <Label htmlFor="client-name" className="text-sm font-medium whitespace-nowrap text-muted-foreground">
+                  Client
+                </Label>
                 <Input
                   id="client-name"
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
                   placeholder="e.g., Acme Corporation"
-                  className="h-9"
+                  className="h-9 text-sm"
                 />
               </div>
 
@@ -408,36 +402,45 @@ export default function WorkspacePage() {
               />
 
               {/* Spacer */}
-              <div className="flex-1" />
+              <div className="flex-1 min-w-4" />
 
               {/* Primary Actions */}
               <div className="flex items-center gap-2">
                 <Button
                   onClick={handleAutoDetect}
                   disabled={files.length === 0 || detecting}
-                  variant="secondary"
-                  size="sm"
-                  className="h-9"
+                  size="default"
+                  className="h-9 px-4 font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {detecting ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Detecting...
+                    </>
                   ) : (
-                    <Search className="w-4 h-4 mr-2" />
+                    <>
+                      <Search className="w-4 h-4 mr-2" />
+                      Auto-Detect
+                    </>
                   )}
-                  {detecting ? "Detecting..." : "Auto-Detect"}
                 </Button>
                 <Button
                   onClick={handleExtraction}
                   disabled={!clientName || files.length === 0 || extracting}
-                  size="sm"
-                  className="h-9"
+                  size="default"
+                  className="h-9 px-5 font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {extracting ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Extracting...
+                    </>
                   ) : (
-                    <Sparkles className="w-4 h-4 mr-2" />
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Start Extraction
+                    </>
                   )}
-                  {extracting ? "Extracting..." : "Start Extraction"}
                 </Button>
                 <SettingsPanel settings={settings} onUpdate={updateSettings} />
               </div>
@@ -450,28 +453,38 @@ export default function WorkspacePage() {
 
           {/* MAIN: Document Table - Takes most space */}
           <div className="xl:col-span-8 space-y-4">
-            {/* Upload Zone */}
-            <FileUploadZone
-              onFilesSelected={handleFileUpload}
-              uploading={uploading}
-              disabled={uploading}
-            />
+            {/* Upload Zone + Category Manager Side by Side */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Upload Zone - Left Half */}
+              <FileUploadZone
+                onFilesSelected={handleFileUpload}
+                uploading={uploading}
+                disabled={uploading}
+              />
 
-            {/* Document Table - THE CORE */}
-            <Card className="border shadow-sm overflow-hidden">
-              <CardHeader className="py-3 px-4 bg-muted/30 border-b">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base font-semibold">
-                    Documents
-                  </CardTitle>
+              {/* Category Manager - Right Half */}
+              <Card className="shadow-sm">
+                <CardHeader className="pb-2 pt-3">
+                  <CardTitle className="text-sm font-semibold">Categories</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
                   <SubtypeManager
                     subtypes={subtypes}
                     onAddSubtype={addSubtype}
                     onRemoveSubtype={removeSubtype}
                     disabled={extracting}
-                    compact={true}
+                    compact={false}
                   />
-                </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Document Table - THE CORE */}
+            <Card className="border shadow-sm overflow-hidden">
+              <CardHeader className="py-2.5 px-4 bg-muted/30 border-b">
+                <CardTitle className="text-base font-semibold">
+                  Documents
+                </CardTitle>
               </CardHeader>
               <FileList
                 files={files}
@@ -483,27 +496,6 @@ export default function WorkspacePage() {
               />
             </Card>
 
-            {/* Results Banner (when available) */}
-            {results && (
-              <Card className="border-primary/20 bg-primary/5">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                      <Sparkles className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <div className="font-medium text-foreground">Extraction Complete</div>
-                      <div className="text-sm text-muted-foreground">
-                        {Object.keys(results).length} categories processed
-                      </div>
-                    </div>
-                  </div>
-                  <Button onClick={() => setShowResults(true)}>
-                    View Results
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
           </div>
 
           {/* SIDE: Preview Panel */}
@@ -520,6 +512,13 @@ export default function WorkspacePage() {
             </Card>
           </div>
         </div>
+
+        {/* Results Section (when available) */}
+        {results && (
+          <div className="mt-8">
+            <ResultsSection results={results} />
+          </div>
+        )}
       </div>
 
       {/* Extraction Progress Modal */}
@@ -527,13 +526,6 @@ export default function WorkspacePage() {
         progress={extraction}
         subtypes={subtypes}
         onCancel={extracting ? handleCancelExtraction : undefined}
-      />
-
-      {/* Results Dialog */}
-      <ResultsDialog
-        results={results}
-        open={showResults}
-        onOpenChange={setShowResults}
       />
     </div>
   );

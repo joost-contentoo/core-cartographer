@@ -41,9 +41,8 @@ export function SettingsPanel({ settings, onUpdate }: SettingsPanelProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="secondary" className="w-full justify-start">
-          <SettingsIcon className="w-4 h-4 mr-2" />
-          Settings
+        <Button variant="outline" size="icon" className="h-9 w-9">
+          <SettingsIcon className="w-4 h-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">

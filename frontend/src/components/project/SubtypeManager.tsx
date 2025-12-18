@@ -69,46 +69,60 @@ export function SubtypeManager({
     return subtype !== "general";
   };
 
+  // Helper function to get badge color for each subtype
+  const getBadgeColor = (subtype: string, index: number) => {
+    const colors = [
+      "bg-blue-100 text-blue-700 border-blue-200",
+      "bg-purple-100 text-purple-700 border-purple-200",
+      "bg-pink-100 text-pink-700 border-pink-200",
+      "bg-orange-100 text-orange-700 border-orange-200",
+      "bg-teal-100 text-teal-700 border-teal-200",
+      "bg-indigo-100 text-indigo-700 border-indigo-200",
+      "bg-cyan-100 text-cyan-700 border-cyan-200",
+      "bg-emerald-100 text-emerald-700 border-emerald-200",
+    ];
+    return colors[index % colors.length];
+  };
+
   // Compact mode: inline badges with small add button
   if (compact) {
     return (
       <>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-muted-foreground mr-1">Categories:</span>
-          {subtypes.map((st) => (
+          {subtypes.map((st, index) => (
             <Badge
               key={st}
-              variant="secondary"
-              className="text-xs px-2 py-0.5 flex items-center gap-1"
+              variant="outline"
+              className={`text-xs px-2.5 py-1 flex items-center gap-1.5 font-medium ${getBadgeColor(st, index)}`}
             >
               {st}
               {canDeleteSubtype(st) && !disabled && (
                 <button
                   onClick={() => setDeleteTarget(st)}
-                  className="hover:bg-muted rounded-full p-0.5 transition-colors"
+                  className="hover:bg-black/10 rounded-full p-0.5 transition-colors"
                   aria-label={`Remove ${st}`}
                 >
-                  <X className="w-2.5 h-2.5" />
+                  <X className="w-3 h-3" />
                 </button>
               )}
             </Badge>
           ))}
           {showAddInput ? (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <Input
                 value={newSubtype}
                 onChange={(e) => setNewSubtype(e.target.value)}
                 onKeyDown={handleKeyPress}
                 placeholder="Category name"
                 disabled={disabled}
-                className="h-6 w-[120px] text-xs"
+                className="h-7 w-[140px] text-xs"
                 autoFocus
               />
               <Button
                 onClick={handleAdd}
                 disabled={disabled || !newSubtype.trim()}
                 size="sm"
-                className="h-6 px-2 text-xs"
+                className="h-7 px-3 text-xs bg-green-600 hover:bg-green-700 text-white"
               >
                 Add
               </Button>
@@ -117,9 +131,8 @@ export function SubtypeManager({
             <Button
               onClick={() => setShowAddInput(true)}
               disabled={disabled}
-              variant="ghost"
               size="sm"
-              className="h-6 px-2 text-xs"
+              className="h-7 px-3 text-xs bg-green-600 hover:bg-green-700 text-white font-semibold shadow-sm"
             >
               <Plus className="w-3 h-3 mr-1" />
               Add
@@ -154,65 +167,53 @@ export function SubtypeManager({
     );
   }
 
-  // Full mode: Card with description
+  // Full mode: Compact inline version
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl">Categories</CardTitle>
-          <CardDescription>
-            Organize files into content categories. Files will be processed separately by category.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Existing Subtypes */}
-          <div className="flex gap-2 flex-wrap">
-            {subtypes.map((st) => (
-              <Badge
-                key={st}
-                variant="default"
-                className="text-sm px-3 py-1.5 flex items-center gap-2"
-              >
-                {st}
-                {canDeleteSubtype(st) && !disabled && (
-                  <button
-                    onClick={() => setDeleteTarget(st)}
-                    className="hover:bg-primary-600 rounded-full p-0.5 transition-colors"
-                    aria-label={`Remove ${st}`}
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                )}
-              </Badge>
-            ))}
-          </div>
-
-          {/* Add New Subtype */}
-          <div className="flex gap-2">
-            <Input
-              value={newSubtype}
-              onChange={(e) => setNewSubtype(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Add new category (e.g., legal, marketing)"
-              disabled={disabled}
-            />
-            <Button
-              onClick={handleAdd}
-              disabled={disabled || !newSubtype.trim()}
-              size="md"
+      <div className="space-y-2">
+        {/* Existing Subtypes */}
+        <div className="flex gap-2 flex-wrap">
+          {subtypes.map((st, index) => (
+            <Badge
+              key={st}
+              variant="outline"
+              className={`text-xs px-2.5 py-1 flex items-center gap-1.5 font-medium ${getBadgeColor(st, index)}`}
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Add
-            </Button>
-          </div>
+              {st}
+              {canDeleteSubtype(st) && !disabled && (
+                <button
+                  onClick={() => setDeleteTarget(st)}
+                  className="hover:bg-black/10 rounded-full p-0.5 transition-colors"
+                  aria-label={`Remove ${st}`}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </Badge>
+          ))}
+        </div>
 
-          {subtypes.length > 1 && (
-            <p className="text-xs text-muted-foreground">
-              Tip: Each category will be extracted separately, allowing you to organize different types of content.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+        {/* Add New Subtype */}
+        <div className="flex gap-2">
+          <Input
+            value={newSubtype}
+            onChange={(e) => setNewSubtype(e.target.value)}
+            onKeyDown={handleKeyPress}
+            placeholder="Add category (e.g., legal, marketing)"
+            disabled={disabled}
+            className="h-8 text-sm"
+          />
+          <Button
+            onClick={handleAdd}
+            disabled={disabled || !newSubtype.trim()}
+            size="sm"
+            className="h-8 px-3 text-xs bg-green-600 hover:bg-green-700 text-white font-semibold"
+          >
+            <Plus className="w-3 h-3 mr-1" />
+            Add
+          </Button>
+        </div>
+      </div>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>

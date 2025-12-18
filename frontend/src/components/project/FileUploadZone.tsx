@@ -73,15 +73,15 @@ export function FileUploadZone({
   );
 
   return (
-    <Card className={cn("transition-all", isDragging && "ring-2 ring-primary shadow-lg scale-[1.02]")}>
-      <CardContent className="pt-6">
+    <Card className={cn("transition-all h-full", isDragging && "ring-2 ring-primary shadow-lg scale-[1.01]")}>
+      <CardContent className="pt-3 pb-3 h-full">
         <div
           onDragEnter={handleDragEnter}
           onDragLeave={handleDragLeave}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           className={cn(
-            "border-2 border-dashed rounded-xl p-8 text-center transition-all",
+            "border-2 border-dashed rounded-lg p-4 text-center transition-all h-full flex items-center justify-center",
             isDragging
               ? "border-primary bg-primary-50 dark:bg-primary-900/20"
               : "border-primary-300 hover:border-primary-500 hover:bg-primary-50/50",
@@ -100,29 +100,29 @@ export function FileUploadZone({
           <label
             htmlFor="file-upload-input"
             className={cn(
-              "flex flex-col items-center gap-3",
+              "flex flex-col items-center gap-2",
               !(disabled || uploading) && "cursor-pointer"
             )}
           >
             {uploading ? (
-              <Loader2 className="w-12 h-12 text-primary animate-spin" />
+              <Loader2 className="w-8 h-8 text-primary animate-spin" />
             ) : (
               <Upload
                 className={cn(
-                  "w-12 h-12 transition-transform",
+                  "w-8 h-8 transition-transform",
                   isDragging ? "text-primary scale-110" : "text-primary-600"
                 )}
               />
             )}
             <div>
-              <p className="text-primary-700 font-medium text-lg">
+              <p className="text-primary-700 font-medium text-sm">
                 {uploading
                   ? "Uploading files..."
                   : isDragging
                   ? "Drop files here"
                   : "Click to upload or drag files here"}
               </p>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 PDF, DOCX, TXT, MD (max {maxSize}MB per file)
               </p>
             </div>

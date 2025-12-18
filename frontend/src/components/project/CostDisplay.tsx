@@ -13,13 +13,13 @@ interface CostDisplayProps {
 export function CostDisplay({ totalTokens, estimatedCost, minimal = false }: CostDisplayProps) {
   if (minimal) {
     return (
-      <div className="flex items-center gap-4 text-sm bg-background/50 px-3 py-1.5 rounded-lg border border-border/50">
-        <div className="flex items-center gap-1.5 font-medium text-primary-700">
+      <div className="flex items-center gap-3 text-sm bg-muted/50 px-3.5 py-2 rounded-lg border">
+        <div className="flex items-center gap-1.5 font-semibold text-primary">
           <DollarSign className="w-4 h-4" />
-          {formatCost(estimatedCost)}
+          <span>{formatCost(estimatedCost)}</span>
         </div>
         <div className="h-4 w-px bg-border" />
-        <div className="text-muted-foreground whitespace-nowrap">
+        <div className="text-muted-foreground whitespace-nowrap font-medium">
           {formatTokens(totalTokens)} tokens
         </div>
       </div>

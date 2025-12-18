@@ -40,6 +40,21 @@ export function FileList({
 }: FileListProps) {
   const [deleteTarget, setDeleteTarget] = useState<FileMetadata | null>(null);
 
+  // Helper function to get badge color for each subtype (matching SubtypeManager)
+  const getBadgeColor = (subtype: string, index: number) => {
+    const colors = [
+      "bg-blue-100 text-blue-700 border-blue-200",
+      "bg-purple-100 text-purple-700 border-purple-200",
+      "bg-pink-100 text-pink-700 border-pink-200",
+      "bg-orange-100 text-orange-700 border-orange-200",
+      "bg-teal-100 text-teal-700 border-teal-200",
+      "bg-indigo-100 text-indigo-700 border-indigo-200",
+      "bg-cyan-100 text-cyan-700 border-cyan-200",
+      "bg-emerald-100 text-emerald-700 border-emerald-200",
+    ];
+    return colors[index % colors.length];
+  };
+
   // Sort files by pairId, then by filename within each pair
   const sortedFiles = useMemo(() => {
     return [...files].sort((a, b) => {
@@ -86,8 +101,8 @@ export function FileList({
         <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
           <FileText className="w-8 h-8 text-muted-foreground" />
         </div>
-        <h3 className="font-semibold text-lg mb-2">No documents yet</h3>
-        <p className="text-sm text-muted-foreground max-w-sm">
+        <h3 className="font-semibold text-base mb-2">No documents yet</h3>
+        <p className="text-xs text-muted-foreground max-w-sm">
           Upload your documents above to get started.
         </p>
       </div>
@@ -100,22 +115,22 @@ export function FileList({
         <table className="w-full">
           <thead>
             <tr className="border-b bg-muted/50">
-              <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+              <th className="text-left py-2 px-3 text-xs font-medium text-muted-foreground">
                 Document
               </th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground w-[140px]">
+              <th className="text-left py-2 px-3 text-xs font-medium text-muted-foreground w-[130px]">
                 Language
               </th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground w-[100px]">
+              <th className="text-left py-2 px-3 text-xs font-medium text-muted-foreground w-[90px]">
                 Pair
               </th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground w-[150px]">
+              <th className="text-left py-2 px-3 text-xs font-medium text-muted-foreground w-[140px]">
                 Category
               </th>
-              <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground w-[80px]">
+              <th className="text-right py-2 px-3 text-xs font-medium text-muted-foreground w-[70px]">
                 Tokens
               </th>
-              <th className="w-[50px]"></th>
+              <th className="w-[40px]"></th>
             </tr>
           </thead>
           <tbody>
@@ -140,11 +155,11 @@ export function FileList({
                     )}
                   >
                     {/* Document name */}
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-3">
-                        <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <td className="py-1.5 px-3">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                         <div className="min-w-0">
-                          <div className="font-medium truncate max-w-[300px]" title={file.filename}>
+                          <div className="text-sm font-medium truncate max-w-[300px]" title={file.filename}>
                             {file.filename}
                           </div>
                           {file.status === "error" && file.error && (
@@ -152,12 +167,12 @@ export function FileList({
                           )}
                         </div>
                         {file.status === "uploading" && (
-                          <Badge variant="secondary" className="text-xs shrink-0">
+                          <Badge variant="secondary" className="text-xs px-2 py-0.5 shrink-0">
                             Uploading...
                           </Badge>
                         )}
                         {file.status === "error" && (
-                          <Badge variant="destructive" className="text-xs shrink-0">
+                          <Badge variant="destructive" className="text-xs px-2 py-0.5 shrink-0">
                             Error
                           </Badge>
                         )}
@@ -165,19 +180,19 @@ export function FileList({
                     </td>
 
                     {/* Language selector - PROMINENT */}
-                    <td className="py-3 px-4">
+                    <td className="py-1.5 px-3">
                       <Select
                         value={file.language}
                         onValueChange={(value) => onUpdateFile(file.fileId, { language: value })}
                         disabled={file.status === "uploading"}
                       >
                         <SelectTrigger
-                          className="w-[130px] h-9"
+                          className="w-[120px] h-[26px] text-sm"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <SelectValue>
                             <span className="flex items-center gap-2">
-                              <span className="text-lg">{langInfo.flag}</span>
+                              <span className="text-base">{langInfo.flag}</span>
                               <span>{langInfo.code.toUpperCase()}</span>
                             </span>
                           </SelectValue>
@@ -186,7 +201,7 @@ export function FileList({
                           {LANGUAGES.map((lang) => (
                             <SelectItem key={lang.code} value={lang.code}>
                               <span className="flex items-center gap-2">
-                                <span className="text-lg">{lang.flag}</span>
+                                <span className="text-base">{lang.flag}</span>
                                 <span>{lang.name}</span>
                               </span>
                             </SelectItem>
@@ -196,12 +211,12 @@ export function FileList({
                     </td>
 
                     {/* Pair indicator */}
-                    <td className="py-3 px-4">
+                    <td className="py-1.5 px-3">
                       {file.pairId ? (
                         <Badge
                           variant="outline"
                           className={cn(
-                            "font-mono text-sm",
+                            "font-mono text-sm px-2 py-0.5",
                             isFirstInPair && "border-primary text-primary"
                           )}
                         >
@@ -214,21 +229,25 @@ export function FileList({
                     </td>
 
                     {/* Category/Subtype selector */}
-                    <td className="py-3 px-4">
+                    <td className="py-1.5 px-3">
                       <Select
                         value={file.subtype}
                         onValueChange={(value) => onUpdateFile(file.fileId, { subtype: value })}
                         disabled={file.status === "uploading"}
                       >
                         <SelectTrigger
-                          className="w-[140px] h-9"
+                          className={cn("w-[140px] h-9 border", getBadgeColor(file.subtype, subtypes.indexOf(file.subtype)))}
                           onClick={(e) => e.stopPropagation()}
                         >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {subtypes.map((st) => (
-                            <SelectItem key={st} value={st}>
+                          {subtypes.map((st, index) => (
+                            <SelectItem
+                              key={st}
+                              value={st}
+                              className={cn("cursor-pointer", getBadgeColor(st, index))}
+                            >
                               {st}
                             </SelectItem>
                           ))}
@@ -244,7 +263,7 @@ export function FileList({
                     </td>
 
                     {/* Delete button */}
-                    <td className="py-3 px-4">
+                    <td className="py-1.5 px-3">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -253,7 +272,7 @@ export function FileList({
                           setDeleteTarget(file);
                         }}
                         disabled={file.status === "uploading"}
-                        className="h-8 w-8 p-0 opacity-50 hover:opacity-100"
+                        className="h-[26px] w-[26px] p-0 opacity-50 hover:opacity-100"
                       >
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
@@ -267,7 +286,7 @@ export function FileList({
       </div>
 
       {/* File count summary */}
-      <div className="px-4 py-3 border-t bg-muted/30 text-sm text-muted-foreground flex items-center justify-between">
+      <div className="px-4 py-3 border-t bg-muted/30 text-xs text-muted-foreground flex items-center justify-between">
         <span>{files.length} document{files.length !== 1 ? 's' : ''}</span>
         {groupedFiles.filter(g => g.pairId).length > 0 && (
           <span className="flex items-center gap-1">

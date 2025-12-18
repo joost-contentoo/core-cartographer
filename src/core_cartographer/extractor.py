@@ -685,9 +685,19 @@ def extract_rules_and_guidelines(
         # Validate guidelines format (logs warnings for issues)
         _validate_guidelines(guidelines, subtype=document_set.subtype)
 
+    # Log token usage for cost estimation improvement
+    estimated_input = count_tokens(prompt)
+    actual_input = response.usage.input_tokens
+    actual_output = response.usage.output_tokens
+
     logger.info(
         f"Extraction complete: {len(client_rules)} chars rules, "
         f"{len(guidelines)} chars guidelines"
+    )
+    logger.info(
+        f"Token tracking - Estimated input: {estimated_input}, "
+        f"Actual input: {actual_input} ({actual_input/estimated_input*100:.1f}%), "
+        f"Actual output: {actual_output}"
     )
 
     return ExtractionResult(
@@ -840,6 +850,17 @@ def extract_rules_and_guidelines_batch(
             subtype="batch",
             original_error=e,
         )
+
+    # Log token usage for cost estimation improvement
+    estimated_input = count_tokens(prompt)
+    actual_input = response.usage.input_tokens
+    actual_output = response.usage.output_tokens
+
+    logger.info(
+        f"Token tracking (batch) - Estimated input: {estimated_input}, "
+        f"Actual input: {actual_input} ({actual_input/estimated_input*100:.1f}%), "
+        f"Actual output: {actual_output}"
+    )
 
     # Distribute token usage across subtypes
     input_tokens_per_subtype = response.usage.input_tokens // len(document_sets)

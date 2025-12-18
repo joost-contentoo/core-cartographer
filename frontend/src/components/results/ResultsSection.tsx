@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Download, FileText, CheckCircle2 } from "lucide-react";
+import { Download, FileText, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
 import { ExtractionResult } from "@/lib/types";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
   Button,
   Tabs,
   TabsList,
@@ -20,14 +19,13 @@ import { formatTokens } from "@/lib/utils";
 import { CodeViewer } from "./CodeViewer";
 import { MarkdownViewer } from "./MarkdownViewer";
 
-interface ResultsDialogProps {
+interface ResultsSectionProps {
   results: Record<string, ExtractionResult> | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
 }
 
-export function ResultsDialog({ results, open, onOpenChange }: ResultsDialogProps) {
+export function ResultsSection({ results }: ResultsSectionProps) {
   const [selectedSubtype, setSelectedSubtype] = useState<string | null>(null);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   if (!results || Object.keys(results).length === 0) {
     return null;
@@ -66,62 +64,77 @@ export function ResultsDialog({ results, open, onOpenChange }: ResultsDialogProp
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="text-2xl flex items-center gap-2">
+    <Card className="border-primary/20 shadow-lg">
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <CheckCircle2 className="w-6 h-6 text-green-600" />
-            Extraction Complete!
-          </DialogTitle>
-          <DialogDescription>
-            Successfully extracted rules and guidelines from {subtypes.length}{" "}
-            {subtypes.length === 1 ? "category" : "categories"}
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Summary Stats */}
-        <div className="grid grid-cols-3 gap-4 py-4 border-y">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-primary">
-              {subtypes.length}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {subtypes.length === 1 ? "Category" : "Categories"}
+            <div>
+              <CardTitle className="text-xl">Extraction Complete!</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Successfully extracted rules and guidelines from {subtypes.length}{" "}
+                {subtypes.length === 1 ? "category" : "categories"}
+              </p>
             </div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-primary">
-              {formatTokens(totalInputTokens + totalOutputTokens)}
-            </div>
-            <div className="text-sm text-muted-foreground">Total Tokens</div>
-          </div>
-          <div className="text-center">
+          <div className="flex items-center gap-2">
             <Button onClick={handleDownloadAll} variant="secondary" size="sm">
               <Download className="w-4 h-4 mr-2" />
               Download All
             </Button>
+            <Button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              variant="ghost"
+              size="sm"
+            >
+              {isCollapsed ? (
+                <ChevronDown className="w-4 h-4" />
+              ) : (
+                <ChevronUp className="w-4 h-4" />
+              )}
+            </Button>
           </div>
         </div>
+      </CardHeader>
 
-        {/* Subtype Selector (if multiple) */}
-        {subtypes.length > 1 && (
-          <div className="flex gap-2 flex-wrap">
-            {subtypes.map((subtype) => (
-              <Badge
-                key={subtype}
-                variant={subtype === currentSubtype ? "default" : "secondary"}
-                className="cursor-pointer px-3 py-1.5"
-                onClick={() => setSelectedSubtype(subtype)}
-              >
-                {subtype}
-              </Badge>
-            ))}
+      {!isCollapsed && (
+        <CardContent className="space-y-4">
+          {/* Summary Stats */}
+          <div className="grid grid-cols-2 gap-4 pb-4 border-b">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-primary">
+                {subtypes.length}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {subtypes.length === 1 ? "Category" : "Categories"}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-primary">
+                {formatTokens(totalInputTokens + totalOutputTokens)}
+              </div>
+              <div className="text-sm text-muted-foreground">Total Tokens</div>
+            </div>
           </div>
-        )}
 
-        {/* Content Tabs */}
-        <div className="flex-1 min-h-0 overflow-hidden">
-          <Tabs defaultValue="rules" className="h-full flex flex-col">
+          {/* Subtype Selector (if multiple) */}
+          {subtypes.length > 1 && (
+            <div className="flex gap-2 flex-wrap">
+              {subtypes.map((subtype) => (
+                <Badge
+                  key={subtype}
+                  variant={subtype === currentSubtype ? "default" : "secondary"}
+                  className="cursor-pointer px-3 py-1.5"
+                  onClick={() => setSelectedSubtype(subtype)}
+                >
+                  {subtype}
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          {/* Content Tabs */}
+          <Tabs defaultValue="rules" className="w-full">
             <TabsList className="w-full justify-start">
               <TabsTrigger value="rules" className="flex items-center gap-2">
                 <FileText className="w-4 h-4" />
@@ -134,9 +147,9 @@ export function ResultsDialog({ results, open, onOpenChange }: ResultsDialogProp
             </TabsList>
 
             {/* Client Rules Tab */}
-            <TabsContent value="rules" className="flex-1 min-h-0 mt-4 flex flex-col">
-              <div className="h-full flex flex-col">
-                <div className="flex justify-between items-center mb-2 flex-shrink-0">
+            <TabsContent value="rules" className="mt-4">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
                   <div className="text-sm font-medium">
                     {currentSubtype} - Client Rules
                   </div>
@@ -154,10 +167,10 @@ export function ResultsDialog({ results, open, onOpenChange }: ResultsDialogProp
                     Download
                   </Button>
                 </div>
-                <div className="flex-1 min-h-0 overflow-auto">
+                <div className="max-h-[600px] overflow-auto">
                   <CodeViewer code={currentResult.clientRules} language="javascript" />
                 </div>
-                <div className="text-xs text-muted-foreground mt-2 flex-shrink-0">
+                <div className="text-xs text-muted-foreground">
                   {formatTokens(currentResult.inputTokens)} input •{" "}
                   {formatTokens(currentResult.outputTokens)} output tokens
                 </div>
@@ -165,9 +178,9 @@ export function ResultsDialog({ results, open, onOpenChange }: ResultsDialogProp
             </TabsContent>
 
             {/* Guidelines Tab */}
-            <TabsContent value="guidelines" className="flex-1 min-h-0 mt-4 flex flex-col">
-              <div className="h-full flex flex-col">
-                <div className="flex justify-between items-center mb-2 flex-shrink-0">
+            <TabsContent value="guidelines" className="mt-4">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
                   <div className="text-sm font-medium">
                     {currentSubtype} - Guidelines
                   </div>
@@ -185,18 +198,18 @@ export function ResultsDialog({ results, open, onOpenChange }: ResultsDialogProp
                     Download
                   </Button>
                 </div>
-                <div className="flex-1 min-h-0 overflow-auto bg-muted rounded-lg p-4">
+                <div className="max-h-[600px] overflow-auto bg-muted rounded-lg p-4">
                   <MarkdownViewer content={currentResult.guidelines} />
                 </div>
-                <div className="text-xs text-muted-foreground mt-2 flex-shrink-0">
+                <div className="text-xs text-muted-foreground">
                   {formatTokens(currentResult.inputTokens)} input •{" "}
                   {formatTokens(currentResult.outputTokens)} output tokens
                 </div>
               </div>
             </TabsContent>
           </Tabs>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </CardContent>
+      )}
+    </Card>
   );
 }
