@@ -71,12 +71,14 @@ class TestSettingsPropertyPaths:
     def test_client_rules_example_path(self) -> None:
         """Test client rules example path property."""
         settings = Settings(anthropic_api_key="test-key")
-        assert settings.client_rules_example_path == Path("./templates/client_rules_example_condensed.js")
+        expected = Path("./templates/client_rules_example_condensed.js")
+        assert settings.client_rules_example_path == expected
 
     def test_guidelines_example_path(self) -> None:
         """Test guidelines example path property."""
         settings = Settings(anthropic_api_key="test-key")
-        assert settings.guidelines_example_path == Path("./templates/guidelines_example_condensed.md")
+        expected = Path("./templates/guidelines_example_condensed.md")
+        assert settings.guidelines_example_path == expected
 
     def test_extraction_instructions_path(self) -> None:
         """Test extraction instructions path property."""
