@@ -62,36 +62,47 @@ Output 1: client_rules.js
 {client_rules_example}
 ```
 
-Output 2: guidelines.md (CONDENSED FORMAT - 80-150 lines target)
+Output 2: guidelines.md (80-150 lines target)
 ```markdown
 {guidelines_template}
 ```
 
 GUIDELINES.MD FORMAT REQUIREMENTS:
 
-LENGTH: 80-150 lines target. Prioritize completeness over strict brevity.
+The template above has TWO parts:
+1. STRUCTURE (lines 1-85): The format to follow with placeholders - fill these in
+2. REFERENCE EXAMPLES (after ---): Real examples showing quality and depth expected for different languages/domains
+
+IMPORTANT: The reference examples (German e-commerce, French luxury, Dutch SaaS, Spanish B2B, Swedish microcopy) demonstrate the LEVEL OF DETAIL and STYLE expected. Do NOT copy them - create original content based on YOUR documents. Use them to understand:
+- How specific to be (actual phrases, not vague descriptions)
+- What cultural insights to include
+- How to differentiate avoid/prefer patterns
+- The depth of writing style observations
+
+LENGTH: 80-150 lines for YOUR output (just the filled-in structure, not the reference examples).
 
 STRUCTURE: Exactly 4 sections:
 1. ## Voice - Brand personality, tone markers, emotional register, avoid/prefer patterns
 2. ## Writing Style - Localization philosophy, sentence preferences, structural patterns, content type adjustments
-3. ## Cultural Adaptation - Market values, payment/trust context, localization notes
+3. ## Cultural Adaptation - Target audience values, market context, localization notes
 4. ## Transformation Examples - 5 source→target examples with explanations
 
 FORMAT RULES:
 - Use key-value format (LABEL: value), NOT markdown tables
-- NO horizontal rules (---)
+- NO horizontal rules (---) in your output
 - NO numbered section headers (## 1. Purpose)
-- Replace all placeholders with actual values from documents
+- Replace all placeholders with actual observations from documents
 
 CONTENT TO INCLUDE:
-- Forbidden words/patterns in AVOID section (e.g., "Formal address (Sie, Ihnen): Use informal 'du' throughout")
-- Localization philosophy in PHILOSOPHY (e.g., "Adaptation, not translation. Content may differ 10-20% in structure.")
-- Sentence preferences (front-loaded info, shorter sentences, active voice)
-- Structural patterns (questions as openers, practical urgency signals, step-by-step with closure)
-- Content type tone adjustments (payment vs gift vs gaming products)
-- Market values and payment/trust context
-- Currency/format rules in LOCALIZATION NOTES
-- 5 transformation examples covering different content types
+- Voice characteristics observed in documents (personality, tone markers, emotional register)
+- Forbidden words/patterns in AVOID section (based on what's conspicuously absent)
+- Preferred patterns in PREFER section (with actual example phrases from documents)
+- Localization/writing philosophy observed (literal vs adaptive, formal vs casual)
+- Sentence and structural patterns observed in the content
+- Content type adjustments if documents show different tones for different content types
+- Target audience values and cultural context relevant to the market
+- Formatting conventions and localization notes observed
+- 5 transformation examples showing actual source→target pairs from the documents
 
 CONTENT TO EXCLUDE (these go in client_rules.js or are handled elsewhere):
 - Character/word limits (code validates these)
@@ -120,21 +131,21 @@ EXTRACTION RULES & EVIDENCE THRESHOLDS
 ═══════════════════════════════════════════════════════════════════════════════
 
 FORBIDDEN_WORDS
-  What: Formal address (Sie vs du), competitor names, pressure language
+  What: Words/phrases conspicuously absent (e.g., formal vs informal address, competitor names, discouraged language)
   Evidence: Conspicuous absence across ALL documents
 
 {terminology_note}
 
 PATTERNS
-  What: Currency (€5 vs 5 €), dates (DD.MM vs DD/MM), list endings, numbers
+  What: Formatting conventions (currency, dates, numbers, list structures)
   Evidence: 80%+ consistency across occurrences
 
 LENGTHS
-  What: Meta titles/descriptions, paragraph/FAQ lengths
+  What: Content length limits (titles, descriptions, paragraphs)
   Evidence: Observable limits in document structure
 
 STRUCTURE
-  What: Required tags/sections
+  What: Required elements/sections
   Evidence: 100% presence across documents
 
 CLIENT_RULES.JS QUALITY STANDARD:
@@ -242,38 +253,38 @@ def _build_response_format_section(document_sets: list[DocumentSet]) -> str:
 GUIDELINES STRUCTURE (80-150 lines, exactly 4 sections):
 
 ## Voice
-PERSONALITY: [1-2 sentences]
+PERSONALITY: [observed brand persona]
 TONE MARKERS:
-- [quality]: [expression]
-EMOTIONAL REGISTER: [1 sentence]
+- [quality]: [how expressed]
+EMOTIONAL REGISTER: [baseline tone]
 AVOID:
-- [anti-pattern]: [reason/example]
+- [anti-pattern]: [why]
 PREFER:
-- [pattern]: [example]
+- [pattern]: [example from docs]
 
 ## Writing Style
-PHILOSOPHY: [localization approach - adaptation vs translation]
+PHILOSOPHY: [observed approach]
 SENTENCE PREFERENCES:
-- [preference]: [explanation]
+- [observed preference]
 STRUCTURAL PATTERNS:
-- [pattern]: [example]
-CONTENT TYPE ADJUSTMENTS:
+- [observed pattern]
+CONTENT TYPE ADJUSTMENTS (if applicable):
 - [type]: [tone shift]
 
 ## Cultural Adaptation
-MARKET VALUES FOR [MARKET]:
-- [value]: [how to express]
-PAYMENT/TRUST CONTEXT:
-- [context]
+TARGET AUDIENCE VALUES:
+- [value]: [how addressed]
+MARKET-SPECIFIC CONTEXT:
+- [context observed]
 LOCALIZATION NOTES:
-- [note]
+- [formatting/adaptation notes]
 
 ## Transformation Examples
-EXAMPLE 1 - [type]:
-Source: "[text]"
-Target: "[text]"
-Change: [explanation]
-(Include 5 examples covering different content types)"""
+EXAMPLE 1 - [content type]:
+Source: "[from documents]"
+Target: "[from documents]"
+Change: [what changed and why]
+(Include 5 examples from the actual documents)"""
 
     if len(document_sets) == 1:
         return f"""
