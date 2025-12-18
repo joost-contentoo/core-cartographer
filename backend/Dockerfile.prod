@@ -1,0 +1,57 @@
+# Production Dockerfile for Core Cartographer Backend
+# Build context should be the project root directory
+
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY backend/requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt gunicorn
+
+# Copy backend application code
+COPY backend/src/ ./src/
+
+# Copy core_cartographer package
+COPY src/core_cartographer/ ./core_cartographer/
+
+# Copy templates and instructions
+COPY templates/ ./templates/
+COPY instructions/ ./instructions/
+
+# Create cache directory
+RUN mkdir -p /app/temp_cache
+
+# Set cache directory environment variable
+ENV CACHE_DIR=/app/temp_cache
+
+# Create non-root user
+RUN useradd -m -u 1000 cartographer && \
+    chown -R cartographer:cartographer /app
+
+# Switch to non-root user
+USER cartographer
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Run with gunicorn
+CMD ["gunicorn", "src.api.main:app", \
+     "--workers", "4", \
+     "--worker-class", "uvicorn.workers.UvicornWorker", \
+     "--bind", "0.0.0.0:8000", \
+     "--timeout", "300", \
+     "--access-logfile", "-", \
+     "--error-logfile", "-"]

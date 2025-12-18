@@ -10,11 +10,44 @@ from pathlib import Path
 from langdetect import LangDetectException, detect
 
 # Common language codes for filename detection
-LANGUAGE_CODES = frozenset([
-    "EN", "DE", "FR", "NL", "ES", "IT", "PT", "PL", "RU", "JA", "ZH", "KO",
-    "AR", "HE", "TR", "CS", "SK", "HU", "RO", "BG", "HR", "SL", "SR", "UK",
-    "DA", "NO", "SV", "FI", "EL", "TH", "VI", "ID", "MS", "TL",
-])
+LANGUAGE_CODES = frozenset(
+    [
+        "EN",
+        "DE",
+        "FR",
+        "NL",
+        "ES",
+        "IT",
+        "PT",
+        "PL",
+        "RU",
+        "JA",
+        "ZH",
+        "KO",
+        "AR",
+        "HE",
+        "TR",
+        "CS",
+        "SK",
+        "HU",
+        "RO",
+        "BG",
+        "HR",
+        "SL",
+        "SR",
+        "UK",
+        "DA",
+        "NO",
+        "SV",
+        "FI",
+        "EL",
+        "TH",
+        "VI",
+        "ID",
+        "MS",
+        "TL",
+    ]
+)
 
 
 def detect_language(text: str, sample_size: int = 1000) -> str:
@@ -33,7 +66,7 @@ def detect_language(text: str, sample_size: int = 1000) -> str:
 
     try:
         sample = text[:sample_size]
-        lang_code = detect(sample)
+        lang_code: str = detect(sample)
         return lang_code.upper()
     except LangDetectException:
         return "UNKNOWN"
@@ -102,19 +135,36 @@ def find_base_name(filename: str) -> str:
         'card'
         >>> find_base_name("gift-cards-DE.docx")
         'gift-cards'
+        >>> find_base_name("de-DE_amazon__product.docx")
+        'amazon_product'
+        >>> find_base_name("en-MC-_jeton-cash__product.docx")
+        'jeton-cash_product'
     """
     name = Path(filename).stem
 
-    # Remove language codes in various formats
-    name = re.sub(r"[_\-\(\[]([A-Z]{2})[_\-\)\]]", "", name, flags=re.IGNORECASE)
+    # Remove leading locale patterns: en-GB_, de-DE_, EN-MC_, en-MC-_, "de-DE _", etc.
+    # Pattern: two letters, dash, two letters, optional dash, optional space, underscore at start
+    name = re.sub(r"^[a-z]{2}-[a-z]{2}-?\s*_", "", name, flags=re.IGNORECASE)
+
+    # Build pattern for valid language codes only
+    lang_pattern = "|".join(LANGUAGE_CODES)
+
+    # Remove language codes in various formats (but only valid ones)
+    # Pattern: language code between delimiters like _EN_, -DE-, (FR), [NL]
+    name = re.sub(rf"[_\-\(\[]({lang_pattern})[_\-\)\]]", "", name, flags=re.IGNORECASE)
 
     # Remove trailing language codes without delimiters
-    lang_pattern = "|".join(LANGUAGE_CODES)
     name = re.sub(rf"[\s_\-]*({lang_pattern})[\s_\-]*$", "", name, flags=re.IGNORECASE)
 
-    # Normalize multiple separators
+    # Normalize multiple separators (including double underscores, dash-underscore combos)
     name = re.sub(r"[\s_\-]{2,}", "_", name)
+
+    # Strip trailing/leading separators
     name = name.strip("_- ")
+
+    # Remove trailing dashes from brand names (e.g., "steam-" -> "steam", "xbox-" -> "xbox")
+    # This handles inconsistencies like "de-DE_steam-__product" vs "en-UK_steam__product"
+    name = re.sub(r"-+_", "_", name)
 
     return name.lower()
 
@@ -180,7 +230,7 @@ def find_translation_pair(
     """
     Find the best translation pair for a file among candidates.
 
-    Uses filename similarity and content length to find matches.
+    Only pairs files that have the exact same base name but different languages.
 
     Args:
         filename: The source filename.
@@ -192,32 +242,14 @@ def find_translation_pair(
         The matched filename, or None if no suitable pair found.
     """
     my_base = find_base_name(filename)
-    my_content = file_contents.get(filename, "")
-
-    best_match = None
-    best_score = 0.0
 
     for cand_filename, cand_lang, cand_base in candidates:
         # Skip same language
         if cand_lang == language:
             continue
 
-        # Exact base name match is a strong signal
+        # Only pair files with exact matching base names
         if my_base and cand_base and my_base == cand_base:
             return cand_filename
 
-        # Calculate combined score
-        fuzzy_score = fuzzy_similarity(my_base, cand_base)
-
-        cand_content = file_contents.get(cand_filename, "")
-        if my_content and cand_content:
-            len_ratio = calculate_content_similarity(my_content, cand_content)
-            combined_score = fuzzy_score * 0.7 + len_ratio * 0.3
-        else:
-            combined_score = fuzzy_score
-
-        if combined_score > best_score and combined_score > 0.5:
-            best_score = combined_score
-            best_match = cand_filename
-
-    return best_match
+    return None

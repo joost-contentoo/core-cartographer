@@ -2,7 +2,7 @@
 
 import tiktoken
 
-# Pricing per 1M tokens (as of Dec 2024)
+# Pricing per 1M tokens (as of Dec 2025)
 # Using Claude Opus 4.5 pricing
 PRICING = {
     "claude-opus-4-5-20251101": {
@@ -24,7 +24,9 @@ def count_tokens(text: str) -> int:
     """
     Count the number of tokens in a text string.
 
-    Uses cl100k_base encoding as an approximation for Claude tokenization.
+    Uses cl100k_base encoding as an approximation for Claude tokenization,
+    with a 1.2x correction factor to provide a conservative estimate
+    (Claude's tokenizer typically produces ~16-20% more tokens than tiktoken).
 
     Args:
         text: The text to count tokens for.
@@ -34,13 +36,18 @@ def count_tokens(text: str) -> int:
     """
     # Using cl100k_base as a reasonable approximation for Claude
     encoding = tiktoken.get_encoding("cl100k_base")
-    return len(encoding.encode(text))
+    base_count = len(encoding.encode(text))
+
+    # Apply 1.2x correction factor for conservative estimation
+    # (Claude's tokenizer produces ~16-20% more tokens than tiktoken)
+    return int(base_count * 1.2)
 
 
 def estimate_cost(
     input_tokens: int,
     estimated_output_tokens: int,
     model: str = "claude-opus-4-5-20251101",
+    round_to_nickel: bool = True,
 ) -> float:
     """
     Estimate the cost of an API call.
@@ -49,6 +56,7 @@ def estimate_cost(
         input_tokens: Number of input tokens.
         estimated_output_tokens: Estimated number of output tokens.
         model: Model name for pricing lookup.
+        round_to_nickel: If True, round up to nearest $0.05 increment.
 
     Returns:
         Estimated cost in USD.
@@ -58,7 +66,15 @@ def estimate_cost(
     input_cost = (input_tokens / 1_000_000) * pricing["input"]
     output_cost = (estimated_output_tokens / 1_000_000) * pricing["output"]
 
-    return input_cost + output_cost
+    total_cost = input_cost + output_cost
+
+    if round_to_nickel:
+        # Round up to nearest $0.05
+        import math
+
+        return math.ceil(total_cost / 0.05) * 0.05
+
+    return total_cost
 
 
 def format_cost(cost: float) -> str:

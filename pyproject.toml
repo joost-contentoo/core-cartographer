@@ -38,13 +38,9 @@ dev = [
     "ruff>=0.8.0",
     "mypy>=1.0.0",
 ]
-gui = [
-    "streamlit>=1.30.0",
-]
 
 [project.scripts]
 cartographer = "core_cartographer.cli:main"
-cartographer-gui = "core_cartographer.gui:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

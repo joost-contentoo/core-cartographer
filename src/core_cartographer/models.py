@@ -5,7 +5,6 @@ for representing documents, document sets, and extraction results.
 """
 
 from dataclasses import dataclass, field
-from pathlib import Path
 
 
 @dataclass
@@ -77,7 +76,7 @@ class DocumentSet:
         pairs: dict[str, dict[str, Document]] = {}
 
         for doc in self.documents:
-            if not doc.is_paired:
+            if not doc.is_paired or doc.pair_id is None:
                 continue
 
             if doc.pair_id not in pairs:
@@ -93,11 +92,13 @@ class DocumentSet:
         result = []
         for pair_id, docs in sorted(pairs.items()):
             if "source" in docs and "target" in docs:
-                result.append(DocumentPair(
-                    pair_id=pair_id,
-                    source=docs["source"],
-                    target=docs["target"],
-                ))
+                result.append(
+                    DocumentPair(
+                        pair_id=pair_id,
+                        source=docs["source"],
+                        target=docs["target"],
+                    )
+                )
 
         return result
 
@@ -113,10 +114,7 @@ class DocumentSet:
             paired_filenames.add(pair.source.filename)
             paired_filenames.add(pair.target.filename)
 
-        return [
-            doc for doc in self.documents
-            if doc.filename not in paired_filenames
-        ]
+        return [doc for doc in self.documents if doc.filename not in paired_filenames]
 
     @property
     def languages(self) -> set[str]:

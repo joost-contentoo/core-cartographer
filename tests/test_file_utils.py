@@ -214,15 +214,16 @@ class TestFindTranslationPair:
         assert result is None
 
     def test_fuzzy_match_with_content_similarity(self) -> None:
-        """Test fuzzy matching combined with content similarity."""
+        """Test exact base name matching (strict matching enforced)."""
+        # After strict base name matching was enforced, only exact base matches work
         candidates = [
-            ("doc_DE.txt", "DE", "doc"),
+            ("document_DE.txt", "DE", "document"),  # Exact base match
             ("other_DE.txt", "DE", "other"),
         ]
         file_contents = {
-            "document_EN.txt": "A" * 100,  # 100 chars
-            "doc_DE.txt": "B" * 95,        # Similar length
-            "other_DE.txt": "C" * 10,      # Very different length
+            "document_EN.txt": "A" * 100,
+            "document_DE.txt": "B" * 95,  # Exact base name match
+            "other_DE.txt": "C" * 10,
         }
 
         result = find_translation_pair(
@@ -231,8 +232,8 @@ class TestFindTranslationPair:
             candidates,
             file_contents,
         )
-        # Should prefer doc_DE due to similar name AND similar content length
-        assert result == "doc_DE.txt"
+        # Should match document_DE due to exact base name match
+        assert result == "document_DE.txt"
 
     def test_no_suitable_candidates(self) -> None:
         """Test when no candidates meet threshold."""

@@ -25,10 +25,7 @@ class TestSettings:
 
     def test_custom_model(self) -> None:
         """Test setting custom model."""
-        settings = Settings(
-            anthropic_api_key="test-key",
-            model="claude-sonnet-4-20250514"
-        )
+        settings = Settings(anthropic_api_key="test-key", model="claude-sonnet-4-20250514")
         assert settings.model == "claude-sonnet-4-20250514"
 
     def test_default_directories(self) -> None:
@@ -71,12 +68,14 @@ class TestSettingsPropertyPaths:
     def test_client_rules_example_path(self) -> None:
         """Test client rules example path property."""
         settings = Settings(anthropic_api_key="test-key")
-        assert settings.client_rules_example_path == Path("./templates/client_rules_example_condensed.js")
+        expected = Path("./templates/client_rules_example_condensed.js")
+        assert settings.client_rules_example_path == expected
 
     def test_guidelines_example_path(self) -> None:
         """Test guidelines example path property."""
         settings = Settings(anthropic_api_key="test-key")
-        assert settings.guidelines_example_path == Path("./templates/guidelines_example_condensed.md")
+        expected = Path("./templates/guidelines_example_condensed.md")
+        assert settings.guidelines_example_path == expected
 
     def test_extraction_instructions_path(self) -> None:
         """Test extraction instructions path property."""
@@ -86,10 +85,7 @@ class TestSettingsPropertyPaths:
 
     def test_custom_templates_dir_affects_paths(self) -> None:
         """Test that custom templates_dir affects path properties."""
-        settings = Settings(
-            anthropic_api_key="test-key",
-            templates_dir=Path("/custom/templates")
-        )
+        settings = Settings(anthropic_api_key="test-key", templates_dir=Path("/custom/templates"))
         expected_rules = Path("/custom/templates/client_rules_example_condensed.js")
         expected_guidelines = Path("/custom/templates/guidelines_example_condensed.md")
         assert settings.client_rules_example_path == expected_rules
@@ -145,10 +141,9 @@ class TestSettingsFromEnv:
         """Test loading model from environment."""
         get_settings.cache_clear()
 
-        with patch.dict(os.environ, {
-            "ANTHROPIC_API_KEY": "test-key",
-            "MODEL": "claude-sonnet-4-20250514"
-        }):
+        with patch.dict(
+            os.environ, {"ANTHROPIC_API_KEY": "test-key", "MODEL": "claude-sonnet-4-20250514"}
+        ):
             settings = get_settings()
             assert settings.model == "claude-sonnet-4-20250514"
 
@@ -158,11 +153,14 @@ class TestSettingsFromEnv:
         """Test loading directories from environment."""
         get_settings.cache_clear()
 
-        with patch.dict(os.environ, {
-            "ANTHROPIC_API_KEY": "test-key",
-            "INPUT_DIR": "/env/input",
-            "OUTPUT_DIR": "/env/output",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "ANTHROPIC_API_KEY": "test-key",
+                "INPUT_DIR": "/env/input",
+                "OUTPUT_DIR": "/env/output",
+            },
+        ):
             settings = get_settings()
             assert settings.input_dir == Path("/env/input")
             assert settings.output_dir == Path("/env/output")

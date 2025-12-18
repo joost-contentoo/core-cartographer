@@ -82,8 +82,8 @@ class TestEstimateCost:
 
     def test_small_token_count(self) -> None:
         """Test cost with small token counts."""
-        # 1000 input + 500 output
-        result = estimate_cost(1000, 500, "claude-opus-4-5-20251101")
+        # 1000 input + 500 output (without rounding to nickel)
+        result = estimate_cost(1000, 500, "claude-opus-4-5-20251101", round_to_nickel=False)
         expected = (1000 / 1_000_000 * 5.0) + (500 / 1_000_000 * 25.0)
         assert result == pytest.approx(expected)
 
