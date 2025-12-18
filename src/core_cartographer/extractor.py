@@ -77,12 +77,38 @@ Output 1: client_rules.js
 {client_rules_example}
 ```
 
-Output 2: guidelines.md (follow this structure and guidance)
+Output 2: guidelines.md (CONDENSED FORMAT - 80-120 lines STRICT)
 ```markdown
 {guidelines_template}
 ```
 
-CRITICAL: Replace all placeholders ([CLIENT_NAME], [TARGET_LANGUAGE], etc.) with actual values from the documents you're analyzing."""
+GUIDELINES.MD FORMAT REQUIREMENTS:
+
+LENGTH: 80-120 lines maximum. This is STRICT.
+
+STRUCTURE: Exactly 3 sections only:
+1. ## Voice - Brand personality, tone markers, emotional register, avoid/prefer patterns
+2. ## Cultural Adaptation - Market values to emphasize, localization notes
+3. ## Transformation Examples - 3-5 source→target examples with explanations
+
+FORMAT RULES:
+- Use key-value format (LABEL: value), NOT markdown tables
+- NO horizontal rules (---)
+- NO numbered section headers (## 1. Purpose)
+- Replace all placeholders with actual values from documents
+
+CONTENT TO INCLUDE:
+- Forbidden words/patterns in AVOID section (e.g., "Formal address (Sie, Ihnen): Use informal 'du' throughout")
+- Currency/number format rules in LOCALIZATION NOTES (e.g., "Currency: Use format 'X €'")
+- Voice, tone, cultural values that help LLMs write correctly first time
+
+CONTENT TO EXCLUDE (these go in client_rules.js or are handled elsewhere):
+- Character/word limits (code validates these)
+- JSON schema or output structure details
+- Section type definitions
+- Pass/fail thresholds or scoring criteria
+- Detailed terminology mappings (these go in client_rules.js)
+- Quality checklists or review criteria"""
 
 
 def _build_extraction_rules_section(has_pairs: bool) -> str:
@@ -221,6 +247,33 @@ def _build_response_format_section(document_sets: list[DocumentSet]) -> str:
     """Build the response format instruction section."""
     subtype_names = [ds.subtype for ds in document_sets]
 
+    guidelines_structure = """
+GUIDELINES STRUCTURE (80-120 lines, exactly 3 sections):
+
+## Voice
+PERSONALITY: [1-2 sentences]
+TONE MARKERS:
+- [quality]: [expression]
+- [quality]: [expression]
+EMOTIONAL REGISTER: [1 sentence]
+AVOID:
+- [anti-pattern]: [reason/example]
+PREFER:
+- [pattern]: [example]
+
+## Cultural Adaptation
+EMPHASIZE FOR [MARKET]:
+- [value]: [how to express]
+LOCALIZATION NOTES:
+- [adaptation rule]
+
+## Transformation Examples
+EXAMPLE 1 - [type]:
+Source: "[text]"
+Target: "[text]"
+Change: [explanation]
+(Include 3-5 examples)"""
+
     if len(document_sets) == 1:
         return f"""
 ═══════════════════════════════════════════════════════════════════════════════
@@ -239,7 +292,8 @@ Respond with:
 
 ### GUIDELINES
 
-[Complete guidelines.md following the structure above - NO code fence]"""
+[Complete guidelines.md - CONDENSED FORMAT, NO code fence]
+{guidelines_structure}"""
 
     return f"""
 ═══════════════════════════════════════════════════════════════════════════════
@@ -286,9 +340,8 @@ RESPONSE FORMAT - Separate output for EACH subtype:
 
 ### GUIDELINES
 
-[Complete guidelines.md - include common voice plus subtype-specific variations]
-
----
+[Complete guidelines.md - CONDENSED FORMAT, NO code fence]
+{guidelines_structure}
 
 (Repeat for each subtype: {', '.join(subtype_names)})
 
@@ -338,6 +391,70 @@ def build_extraction_prompt(
 # =============================================================================
 # RESPONSE PARSING
 # =============================================================================
+
+
+def _validate_guidelines(guidelines: str, subtype: str = "unknown") -> str:
+    """Validate and log warnings for guidelines that don't meet requirements.
+
+    Checks for:
+    - Line count (should be 80-120, warn if >120)
+    - Required sections (Voice, Cultural Adaptation, Transformation Examples)
+    - Forbidden content (tables, horizontal rules)
+
+    Args:
+        guidelines: The guidelines text to validate.
+        subtype: The subtype name for logging context.
+
+    Returns:
+        The original guidelines (validation is non-destructive, only logs warnings).
+    """
+    if not guidelines:
+        return guidelines
+
+    lines = guidelines.split("\n")
+    line_count = len(lines)
+
+    # Check line count
+    if line_count > 120:
+        logger.warning(
+            f"[{subtype}] Guidelines exceed recommended length: {line_count} lines "
+            f"(target: 80-120). Consider condensing."
+        )
+
+    # Check for required sections
+    required_sections = ["## Voice", "## Cultural Adaptation", "## Transformation Examples"]
+    missing_sections = []
+    for section in required_sections:
+        if section.lower() not in guidelines.lower():
+            missing_sections.append(section)
+
+    if missing_sections:
+        logger.warning(
+            f"[{subtype}] Guidelines missing required sections: {', '.join(missing_sections)}"
+        )
+
+    # Check for forbidden content (tables)
+    if re.search(r"\|.*\|.*\|", guidelines):
+        logger.warning(
+            f"[{subtype}] Guidelines contain markdown tables. "
+            f"Consider using key-value format instead."
+        )
+
+    # Check for horizontal rules
+    if re.search(r"^---+$", guidelines, re.MULTILINE):
+        logger.warning(
+            f"[{subtype}] Guidelines contain horizontal rules (---). "
+            f"These should be removed."
+        )
+
+    # Check for numbered section headers (old format)
+    if re.search(r"## \d+\.", guidelines):
+        logger.warning(
+            f"[{subtype}] Guidelines contain numbered section headers (## 1. etc). "
+            f"Use simple headers (## Voice, ## Cultural Adaptation, ## Transformation Examples)."
+        )
+
+    return guidelines
 
 
 def _parse_response(response_text: str) -> tuple[str, str]:
@@ -443,6 +560,10 @@ def _parse_batch_response(
                 if len(parts) > 1:
                     guidelines = parts[1].strip()
 
+        # Validate guidelines format (logs warnings for issues)
+        if guidelines:
+            _validate_guidelines(guidelines, subtype=subtype)
+
         results[subtype] = ExtractionResult(
             client_rules=client_rules,
             guidelines=guidelines,
@@ -543,6 +664,9 @@ def extract_rules_and_guidelines(
         logger.warning("No client rules found in response")
     if not guidelines:
         logger.warning("No guidelines found in response")
+    else:
+        # Validate guidelines format (logs warnings for issues)
+        _validate_guidelines(guidelines, subtype=document_set.subtype)
 
     logger.info(
         f"Extraction complete: {len(client_rules)} chars rules, "

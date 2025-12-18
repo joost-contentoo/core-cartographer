@@ -57,9 +57,11 @@ htmlcov/
 node_modules/
 
 # Project specific
-# Keep input/output folders but ignore contents (except .gitkeep)
+# Keep input/output/debug folders but ignore contents (except .gitkeep)
 input/*
 !input/.gitkeep
 !input/example_client/
 output/*
 !output/.gitkeep
+debug/*
+!debug/.gitkeep
